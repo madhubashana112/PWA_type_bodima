@@ -757,7 +757,7 @@ function updateCloudBadge(){
 /* ================= I18N ================= */
 const L={
  si:{tag:'බෝඩිමේ සල්ලි',welcome:'ආයුබෝවන් 👋',setupT:'බෝඩිම හදමු',setupP:'බෝඩිමේ නම සහ රහස් අංකය දාලා පටන් ගමු.',
-  hname:'බෝඩිමේ නම',hph:'කොට බෝඩිම',pass:'රහස් අංකය (Password)',passph:'අමතක නොවන එකක්',
+  hname:'බෝඩිමේ නම',hph:'බෝඩිම',pass:'රහස් අංකය (Password)',passph:'අමතක නොවන එකක්',
   members:'සාමාජිකයෝ',addm:'නම දාලා Enter ඔබන්න',start:'පටන් ගන්න',loginT:'ආයෙත් සාදරයෙන්',loginP:'රහස් අංකය දාලා ඇතුළු වෙන්න.',
   login:'ඇතුළු වෙන්න',wrong:'රහස් අංකය වැරදියි',wronghouse:'බෝඩිමේ නම වැරදියි',needname:'බෝඩිමේ නම දාන්න',needpass:'රහස් අංකය දාන්න',
   loginTab:'ඇතුළු වීම',regTab:'ලියාපදිංචිය',regHead:'අලුත් බෝඩිමක්',regSub:'විස්තර දාලා ලියාපදිංචි වෙන්න.',
@@ -831,7 +831,7 @@ const L={
   clearorphan:'මේවා අයින් කරන්න',orphanconf:'වියදමකට සම්බන්ධ නැති ගෙවීම් සේරම අයින් කරන්නද?',cleared:'අයින් කළා ✓',
   breakdown:'ගණන් බැලීම',bdpaid:'ගෙව්වා',bdshare:'ඕන කොටස',bdgot:'ලැබුණා',bdgave:'ගෙව්වා (ආපහු)',bdnet:'ශේෂය'},
  en:{tag:'BOARDING MONEY',welcome:'Welcome 👋',setupT:'Set up your house',setupP:'Add your boarding house name and a password to begin.',
-  hname:'House name',hph:'Kota Bodima',pass:'Password',passph:'something memorable',
+  hname:'House name',hph:'bodima',pass:'Password',passph:'something memorable',
   members:'Members',addm:'Type a name & press Enter',start:'Get Started',loginT:'Welcome back',loginP:'Enter your password to continue.',
   login:'Log in',wrong:'Wrong password',wronghouse:'Wrong house name',needname:'Enter a house name',needpass:'Enter a password',
   loginTab:'Login',regTab:'Register',regHead:'Create your house',regSub:'Fill in the details to register.',
@@ -1339,10 +1339,10 @@ function viewHome(){
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
     </div>
     <button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;
+  h+=`<button class="addbtn coral" style="margin-top:0;margin-bottom:20px" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   h+=`<div class="sec-title">${t('recent')} ${S.expenses.length>6?`<span class="link" onclick="go('hist')">${t('all')} →</span>`:''}</div>`;
   if(!recent.length){h+=`<div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div>`;}
   else{h+=`<div class="card">${recent.map(expRow).join('')}</div>`;}
-  h+=`<button class="addbtn coral" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   const meId0=getMeId();
   const myList=meId0?allDebts().filter(d=>d.owner===meId0):allDebts();
   const owe=myList.reduce((a,d)=>a+debtRemaining(d),0);
