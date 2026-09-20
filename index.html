@@ -330,6 +330,22 @@ textarea.in{resize:none;min-height:46px}
 .smode button.on{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px -3px rgba(34,29,51,.25)}
 .smodesub{font-size:12px;color:var(--muted);margin:-3px 2px 10px;font-weight:600}
 
+/* "repeats monthly" toggle in the expense sheet */
+.recrow{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);
+  border-radius:14px;padding:11px 13px;margin:4px 0 14px;cursor:pointer;transition:.2s}
+.recrow.on{border-color:var(--coral);background:var(--coral-sf)}
+.recrow .rknob{width:34px;height:34px;border-radius:11px;background:var(--line2);display:grid;place-items:center;
+  font-size:16px;transition:.2s}
+.recrow.on .rknob{background:var(--coral);filter:saturate(1.1)}
+.recrow .rtxt{flex:1;min-width:0}
+.recrow .rt{font-weight:800;font-size:13.5px}
+.recrow .rs{font-size:11.5px;color:var(--muted);font-weight:600}
+.recrow .rdot{width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:.22s;flex:none}
+.recrow .rdot:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 6px -1px rgba(34,29,51,.35);transition:.22s}
+.recrow.on .rdot{background:var(--coral)}
+.recrow.on .rdot:after{transform:translateX(18px)}
+
 /* history search & filters */
 .searchrow{position:relative;display:flex;align-items:center;margin-bottom:10px}
 .searchrow .si{position:absolute;left:13px;font-size:15px;pointer-events:none;opacity:.6}
@@ -598,6 +614,7 @@ let view='home';
 function load(){
   try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.members){
     if(!d.archives)d.archives=[];if(!d.activity)d.activity=[];if(!d.debts)d.debts=[];
+    if(!d.recurring)d.recurring=[];
     migrateWholeRupees(d);migrateStoredPass(d);
     return d;}}catch(e){}
   return null;
@@ -629,7 +646,7 @@ function migrateStoredPass(d){
   delete d.pass;
   return d;
 }
-function fresh(){return{house:'',passHash:'',passSalt:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[]};}
+function fresh(){return{house:'',passHash:'',passSalt:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[],recurring:[]};}
 
 /* ---- "who am I" : per-device identity (never synced) ---- */
 const ME_KEY='bodime_me';
@@ -736,12 +753,17 @@ function keyOf(name){return String(name||'').trim().toLowerCase().replace(/[.#$\
    only the changed child paths, so concurrent adds to different ids never
    clobber. A "mirror" of the last-known cloud state lets save() diff and write
    only what changed. */
-const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts'];
+const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts','recurring'];
 function collMap(arr){const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;}
 function snapshotColls(){
   const s={meta:{house:S.house||'',passHash:S.passHash||'',passSalt:S.passSalt||'',lang:S.lang||'en'}};
   CLOUD_COLLS.forEach(c=>s[c]=collMap(S[c]));
-  return s;
+  /* Detached on purpose. collMap hands back the live objects, and this
+     snapshot becomes cloud.mirror — the "what the cloud already has" side of
+     the diff in cloudFlush. Sharing those objects meant editing an expense in
+     place mutated both sides at once, the diff saw no change, and the edit
+     was never sent to anyone else. */
+  return JSON.parse(JSON.stringify(s));
 }
 function emptyMirror(){const m={meta:{}};CLOUD_COLLS.forEach(c=>m[c]={});return m;}
 /* The mirror must describe what is actually in the cloud, not what we hold
@@ -774,6 +796,7 @@ function readCloudSnapshot(data){
     const v=data[c];
     out[c]=Array.isArray(v)?v.slice():(v&&typeof v==='object'?Object.values(v):[]);
   });
+  out.recurring.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   out.activity.sort((a,b)=>(b.at||0)-(a.at||0));
   out.archives.sort((a,b)=>(b.closedAt||0)-(a.closedAt||0));
   out.expenses.sort((a,b)=>(b.date||0)-(a.date||0));
@@ -794,6 +817,7 @@ function applyCloud(out,notify){
   cloud.mirror=snapshotColls();
   cloud.applying=false;cloud.status='synced';updateCloudBadge();
   if(notify)notifyNew(prevTop);
+  catchUpRecurring(true);
 }
 function cloudFlush(){
   if(!(cloud.on&&cloud.ref)||cloud.applying)return;
@@ -885,7 +909,7 @@ function cloudListen(){
       cloud.mirror=emptyMirror();cloudFlush();return;
     }
     const out=readCloudSnapshot(data);
-    if(collSig({house:S.house,passHash:S.passHash,lang:S.lang,members:S.members,expenses:S.expenses,settles:S.settles,archives:S.archives,activity:S.activity,debts:S.debts})===collSig(out)){
+    if(collSig({house:S.house,passHash:S.passHash,lang:S.lang,members:S.members,expenses:S.expenses,settles:S.settles,archives:S.archives,activity:S.activity,debts:S.debts,recurring:S.recurring})===collSig(out)){
       cloud.mirror=snapshotColls();updateCloudBadge();return;   // no change
     }
     applyCloud(out,true);
@@ -961,7 +985,7 @@ const L={
   noacc:'තවම ලියාපදිංචි වෙලා නෑ — Register කරන්න',overwrite:'දැනට තියෙන දත්ත මැකිලා අලුත් බෝඩිමක් හැදෙනවා. දිගටම යන්නද?',
   minpass:'රහස් අංකය අකුරු 4ක්වත් වෙන්න ඕන',cancel:'එපා',ok:'ඔව්',yesgo:'ඔව්, දිගටම',yesdel:'ඔව්, අයින් කරන්න',
   yourbal:'ඔයාගේ තත්ත්වය',allsettled:'සියල්ල පැහැදිලයි 🎉',totspent:'මුළු වියදම',thismonth:'මේ මාසය',
-  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
+  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
   addexp:'වියදමක් එකතු කරන්න',desc:'මොකක්ද ගත්තේ?',descph:'උදා: රෑ කෑම, සබන්, දත් බෙහෙත්',amt:'මුළු මුදල',
   paidby:'ගෙව්වේ කවුද?',splitb:'බෙදෙන්නේ කවුද?',perp:'එක්කෙනෙකුට',total:'මුළු',save:'සේරම Save කරන්න',
   selall:'ඔක්කොම',selnone:'කිසිවෙක් නෑ',people:'දෙනෙක්',balances:'ශේෂයන්',settleup:'පියවමු',
@@ -1035,7 +1059,7 @@ const L={
   noacc:'No account yet — please Register',overwrite:'This erases existing data and creates a new house. Continue?',
   minpass:'Password must be at least 4 characters',cancel:'Cancel',ok:'Yes',yesgo:'Yes, continue',yesdel:'Yes, delete',
   yourbal:'Overall standing',allsettled:'All settled 🎉',totspent:'Total spent',thismonth:'This month',
-  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
+  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
   addexp:'Add expense',desc:'What was it?',descph:'e.g. Dinner, soap, toothpaste',amt:'Total amount',
   paidby:'Who paid?',splitb:'Split between',perp:'Per person',total:'Total',save:'Save expense',
   selall:'All',selnone:'None',people:'people',balances:'Balances',settleup:'Settle up',
@@ -1379,7 +1403,7 @@ function adoptCloudHouse(ref,path,data,v){
   const out=readCloudSnapshot(data);
   S={...fresh(),house:out.house,lang:out.lang||curLang(),
      members:out.members,expenses:out.expenses,settles:out.settles,
-     archives:out.archives,activity:out.activity,debts:out.debts,_auth:true,cpath:path};
+     archives:out.archives,activity:out.activity,debts:out.debts,recurring:out.recurring,_auth:true,cpath:path};
   if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
   else setPass(S,v);                       // house still on a plaintext password
   delete S._rupees;migrateWholeRupees(S);
@@ -1619,7 +1643,8 @@ function expRow(e){
   const lo=vals.length?Math.min(...vals):0, hi=vals.length?Math.max(...vals):0;
   const even=Math.abs(hi-lo)<0.02;
   const perTxt=even?`${fmt(hi)} / ${t('perp').toLowerCase()}`:`${fmt(lo)} – ${fmt(hi)}`;
-  const badge=splitMode(e)!=='equal'?` · ${splitMode(e)==='exact'?t('exact'):t('shares')}`:'';
+  let badge=splitMode(e)!=='equal'?` · ${splitMode(e)==='exact'?t('exact'):t('shares')}`:'';
+  if(e.ruleId&&recurById(e.ruleId))badge+=' · 🔁';
   const d=new Date(e.date);
   const dstr=d.toLocaleDateString(S.lang==='si'?'si-LK':'en-GB',{day:'numeric',month:'short'});
   const owing=(e.parts||[]).filter(pid=>pid!==e.payer&&mById(pid));
@@ -1920,7 +1945,8 @@ function viewHist(){
   if(!S.expenses.length)return `<div class="stg"><div class="sec-title">${t('history')}</div><div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div></div>`;
   const periods=[['all',t('f_all')],['week',t('f_week')],['month',t('f_month')],['prev',t('f_prev')]];
   return `<div class="stg">
-    <div class="sec-title">${t('history')} <span class="link" id="histCount">${histCountLabel()}</span></div>
+    <div class="sec-title">${t('history')}
+      <span><span class="link" style="margin-right:12px" onclick="openRecurring()">🔁 ${(S.recurring||[]).length||''}</span><span class="link" id="histCount">${histCountLabel()}</span></span></div>
     <div class="searchrow">
       <span class="si">🔍</span>
       <input id="histQ" class="sin" type="search" autocomplete="off" placeholder="${t('searchph')}"
@@ -2512,7 +2538,7 @@ function openBackup(){
 function exportBackup(){
   const data={_bodime:1,_ver:4,exportedAt:Date.now(),
     house:S.house,passHash:S.passHash,passSalt:S.passSalt,lang:S.lang,members:S.members,expenses:S.expenses,
-    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[]};
+    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[],recurring:S.recurring||[]};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -2538,12 +2564,136 @@ function importBackup(input){
       if(d.lang)S.lang=d.lang;
       S.members=d.members||[];S.expenses=d.expenses||[];
       S.settles=d.settles||[];S.archives=d.archives||[];S.activity=d.activity||[];S.debts=d.debts||[];
+      S.recurring=d.recurring||[];
       S._auth=true;delete S._rupees;migrateWholeRupees(S);
       const cur=getMeId();if(cur&&!S.members.some(m=>m.id===cur))setMeId(null);
       save();toast(t('bkOk'));closeSheet();view='home';render();reconnectCloud();
     },{emoji:'📤',yes:t('bkYes')});
   };
   rd.readAsText(file);
+}
+
+
+/* ================= RECURRING EXPENSES =================
+   Rent, wifi and the gas bill land every month for the same amount and split.
+   They are kept as rules rather than as flagged expenses, so closing a month
+   (which empties S.expenses into an archive) does not end the series.
+
+   Each month a rule is due for, it produces one expense with an id derived
+   from the rule and the month. Two phones opening the app on the 1st both
+   compute the same id and the same row, so the second write lands on top of
+   the first instead of creating a duplicate. */
+function ymKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function ymAdd(key,n){const a=key.split('-');return ymKey(new Date(+a[0],+a[1]-1+n,1).getTime());}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+/* Midday, so a timezone shift can never drag the date into the month before. */
+function recurDate(key,day){
+  const a=key.split('-'),y=+a[0],m=+a[1]-1;
+  return new Date(y,m,Math.min(day||1,daysInMonth(y,m)),12,0,0,0).getTime();
+}
+function recurById(id){return (S.recurring||[]).find(r=>r.id===id)||null;}
+function recurInstanceId(ruleId,key){return 'r'+ruleId+'-'+key;}
+function archivedHas(id){return (S.archives||[]).some(a=>(a.expenses||[]).some(e=>e.id===id));}
+/* A rule whose payer or participants have since been removed would produce an
+   expense nobody owns, so it is skipped rather than guessed at. */
+function recurUsable(r){
+  if(!r||!r.desc||!(r.amount>0))return false;
+  if(!mById(r.payer))return false;
+  return (r.parts||[]).some(id=>mById(id));
+}
+function rollRecurring(){
+  const rules=S.recurring||[];
+  if(!rules.length)return 0;
+  const nowKey=ymKey(Date.now());
+  let made=0;
+  rules.forEach(r=>{
+    if(!r.lastYm){r.lastYm=nowKey;return;}
+    if(!recurUsable(r)){r.lastYm=nowKey;return;}
+    let cur=r.lastYm,guard=0;
+    while(cur<nowKey&&guard++<60){
+      cur=ymAdd(cur,1);
+      const id=recurInstanceId(r.id,cur);
+      if(!S.expenses.some(e=>e.id===id)&&!archivedHas(id)){
+        const e={id,desc:r.desc,amount:r.amount,payer:r.payer,
+                 parts:(r.parts||[]).filter(pid=>mById(pid)),
+                 date:recurDate(cur,r.day),ruleId:r.id};
+        if(r.split&&r.split.mode&&r.split.mode!=='equal')
+          e.split={mode:r.split.mode,values:Object.assign({},r.split.values||{})};
+        S.expenses.push(e);made++;
+      }
+      r.lastYm=cur;
+    }
+  });
+  return made;
+}
+/* Called at boot, after a sync, and when the app is brought back to the
+   foreground — an installed PWA can sit open across a month boundary. */
+function catchUpRecurring(quiet){
+  let made=0;
+  try{made=rollRecurring();}catch(e){return 0;}
+  if(!made)return 0;
+  logAct('add',t('recadded'),0);
+  save();
+  if(!quiet){toast(made+' '+t('recadded'));if(S._auth&&document.querySelector('.nav'))drawView();}
+  return made;
+}
+function ruleFromDraft(desc,amt,split){
+  return {desc,amount:amt,payer:draft.payer,parts:draft.parts.slice(),
+          split:split?{mode:split.mode,values:Object.assign({},split.values)}:null,
+          day:new Date(draft.date).getDate()};
+}
+/* Turning the toggle on makes (or refreshes) the rule behind this expense;
+   turning it off removes the rule but leaves the expense alone. Returns the
+   rule id the expense should carry, if any. */
+function applyRecurChoice(desc,amt,split,existingRuleId){
+  const had=existingRuleId?recurById(existingRuleId):null;
+  if(!draft.recur){
+    if(had)S.recurring=S.recurring.filter(r=>r.id!==had.id);
+    return null;
+  }
+  const body=ruleFromDraft(desc,amt,split);
+  if(had){Object.assign(had,body);return had.id;}
+  if(!S.recurring)S.recurring=[];
+  // This expense is the series' first instance, so the rule starts due from
+  // next month rather than immediately producing a duplicate of it.
+  const r=Object.assign({id:uid(),createdAt:Date.now(),lastYm:ymKey(draft.date)},body);
+  S.recurring.push(r);
+  return r.id;
+}
+function setRecurToggle(on){
+  draft.recur=!!on;
+  const el=document.getElementById('e_recur');
+  if(el)el.classList.toggle('on',draft.recur);
+}
+function deleteRecur(id){
+  S.recurring=(S.recurring||[]).filter(r=>r.id!==id);
+  save();toast(t('deleted'));
+  if(document.getElementById('sheet').classList.contains('show'))openRecurring();
+  drawView();
+}
+function openRecurring(){
+  const rules=(S.recurring||[]);
+  let body=`<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px">${t('recsub')}</p>`;
+  if(!rules.length){
+    body+=`<div class="empty"><div class="em">🔁</div><div class="t">${t('recnone')}</div><div class="s">${t('recnoneS')}</div></div>`;
+  }else{
+    body+=rules.map(r=>{
+      const p=mById(r.payer);
+      const ok=recurUsable(r);
+      return `<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);
+         border-radius:14px;padding:12px 13px;margin-bottom:9px${ok?'':';opacity:.6'}">
+        <div style="font-size:21px">${emojiFor(r.desc)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.desc)}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600">
+            ${t('recday')} ${r.day} · ${p?esc(p.name):'?'} · ${(r.parts||[]).length} ${t('ppl')}${ok?'':' · '+t('recpaused')}</div>
+        </div>
+        <div style="font-weight:800;font-size:14px">${fmt(r.amount)}</div>
+        <button class="icbtn" style="background:var(--red-sf);color:var(--red)" onclick="deleteRecur('${r.id}')">🗑</button>
+      </div>`;
+    }).join('');
+  }
+  sheet('🔁 '+t('recurring'),body);
 }
 
 /* ---------- ADD / EDIT EXPENSE SHEET ---------- */
@@ -2562,9 +2712,10 @@ function openExpense(editId){
   if(!S.members.length){go('mem');toast(t('nomem2'));return;}
   const ex = editId ? S.expenses.find(e=>e.id===editId) : null;
   draft = ex ? {editId:ex.id,payer:ex.payer,parts:(ex.parts||[]).slice(),
-                mode:splitMode(ex),values:Object.assign({},(ex.split&&ex.split.values)||{}),date:ex.date||Date.now()}
+                mode:splitMode(ex),values:Object.assign({},(ex.split&&ex.split.values)||{}),date:ex.date||Date.now(),
+                ruleId:ex.ruleId||null,recur:!!(ex.ruleId&&recurById(ex.ruleId))}
              : {editId:null,payer:(me()?me().id:S.members[0].id),parts:S.members.map(m=>m.id),
-                mode:'equal',values:{},date:Date.now()};
+                mode:'equal',values:{},date:Date.now(),ruleId:null,recur:false};
   const lng=S.lang;
   const descVal = ex ? esc(ex.desc) : '';
   const amtVal = ex ? ex.amount : '';
@@ -2598,6 +2749,11 @@ function openExpense(editId){
      <div class="smodesub" id="e_modesub"></div>
      <div class="partlist" id="e_parts"></div>
      <div id="e_remain"></div>
+   </div>
+   <div class="recrow ${draft.recur?'on':''}" id="e_recur" onclick="setRecurToggle(!draft.recur)">
+     <div class="rknob"><span>🔁</span></div>
+     <div class="rtxt"><div class="rt">${t('recevery')}</div><div class="rs">${t('recevery2')}</div></div>
+     <div class="rdot"></div>
    </div>
    <button class="addbtn coral" onclick="saveExpense()">${ex?t('update'):t('save')}</button>`;
   sheet(ex?t('editexp'):t('addexp'),body);
@@ -2741,12 +2897,16 @@ function saveExpense(){
     const ex=S.expenses.find(e=>e.id===draft.editId);
     if(ex){ex.desc=desc;ex.amount=amt;ex.payer=draft.payer;ex.parts=draft.parts.slice();ex.date=draft.date;
            if(split)ex.split=split;else delete ex.split;
+           const rid=applyRecurChoice(desc,amt,split,ex.ruleId);
+           if(rid)ex.ruleId=rid;else delete ex.ruleId;
            syncTicks(ex);}
     logAct('edit',desc,amt);
     save();closeSheet();toast(t('updated'));drawView();
   }else{
     const e={id:uid(),desc,amount:amt,payer:draft.payer,parts:draft.parts.slice(),date:draft.date};
     if(split)e.split=split;
+    const rid=applyRecurChoice(desc,amt,split,null);
+    if(rid)e.ruleId=rid;
     S.expenses.push(e);
     logAct('add',desc,amt);
     askNotifyPerm();                 // keep notifications enabled so others get pinged
@@ -2806,6 +2966,7 @@ function hideSplash(){
 }
 
 /* ================= BOOT ================= */
+if(S&&S._auth)catchUpRecurring(true);
 render();
 reconnectCloud();
 setTimeout(hideSplash,900);
@@ -2855,6 +3016,11 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(!document.hidden&&swReg)swReg.update().catch(()=>{});
   });
 }
+/* An installed PWA can sit resumed across a month boundary without ever
+   reloading, so recurring expenses are caught up on resume too. */
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&S&&S._auth)catchUpRecurring();
+});
 </script>
 </body>
 </html>

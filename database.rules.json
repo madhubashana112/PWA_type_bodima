@@ -45,6 +45,7 @@
         "archives": { "$id": { "id": { ".validate": "newData.val() === $id" } } },
         "activity": { "$id": { "id": { ".validate": "newData.val() === $id" } } },
         "debts":    { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "recurring":{ "$id": { "id": { ".validate": "newData.val() === $id" } } },
 
         "$other": { ".validate": false }
       }
