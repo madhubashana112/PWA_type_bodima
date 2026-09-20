@@ -1029,12 +1029,38 @@ function askNotifyPerm(){
   }catch(e){}
 }
 const APP_ICON='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%23F0573C"/><text x="32" y="44" font-size="34" text-anchor="middle">🏠</text></svg>');
-function reconnectCloud(){ // on boot, if already logged in with cloud config
-  if(!(S&&S._auth&&cloud.cfg&&S.cpath))return;   // no remembered path → log in again
+/* Connecting used to be a single attempt at boot. A phone that was on a slow
+   connection for those few seconds — which is most phones, some mornings —
+   failed the 6s read, gave up, and stayed local-only for the rest of the
+   session: .info/connected is only watched once a connection succeeds, so
+   nothing noticed when the network came back. Every expense added after that
+   sat on that one phone. */
+let reconnectTimer=null,reconnectTries=0,syncTried=false;
+function clearReconnect(){if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}reconnectTries=0;}
+/* Worth retrying only when we know where the house is. Without a path the
+   user has to supply the password, which is the bar's other button. */
+function canRetrySync(){return !!(S&&S._auth&&cloud.cfg&&S.cpath&&!cloud.on);}
+function scheduleReconnect(){
+  if(reconnectTimer||!canRetrySync())return;
+  const wait=Math.min(60000,5000*Math.pow(2,Math.min(reconnectTries,4)));
+  reconnectTimer=setTimeout(()=>{reconnectTimer=null;reconnectTries++;tryReconnect();},wait);
+}
+function tryReconnect(manual){
+  if(manual){clearReconnect();syncTried=true;}
+  if(!canRetrySync()){updateCloudBadge();return;}
+  cloud.status='connecting';updateCloudBadge();
   ensureFirebase(ok=>{
-    if(!ok)return;
-    connectHouse(S.cpath,true).catch(()=>{cloud.on=false;updateCloudBadge();});
+    syncTried=true;
+    if(!ok){cloud.on=false;updateCloudBadge();scheduleReconnect();return;}
+    connectHouse(S.cpath,true).then(
+      ()=>{clearReconnect();updateCloudBadge();},
+      ()=>{cloud.on=false;updateCloudBadge();scheduleReconnect();});
   });
+}
+function reconnectCloud(){ // on boot, if already logged in with cloud config
+  if(!(S&&S._auth&&cloud.cfg))return;
+  if(!S.cpath){syncTried=true;renderSyncBar();return;}   // needs the password once
+  tryReconnect();
 }
 /* What the app should say about syncing right now, worked out from the real
    socket state and the writes still in flight rather than from whatever the
@@ -1053,12 +1079,16 @@ function cloudStateLabel(st){
 /* A phone that is logged in and has a cloud config but no path cannot sync,
    and the only clue used to be the word "off" behind the cloud icon. Since
    everything typed into it stays on that phone, it says so out loud. */
-function syncPaused(){return !!(S&&S._auth&&cloud.cfg&&!S.cpath);}
+function syncPaused(){return !!(S&&S._auth&&cloud.cfg&&!S.cpath);}   // needs the password
+function notSyncing(){return !!(S&&S._auth&&cloud.cfg&&!cloud.on);}
 function renderSyncBar(){
   const bar=document.getElementById('syncbar');if(!bar)return;
-  if(!syncPaused()){bar.classList.remove('show');bar.innerHTML='';return;}
+  // Wait for one attempt to settle before crying wolf during a normal boot.
+  if(!(syncPaused()||(notSyncing()&&syncTried))){bar.classList.remove('show');bar.innerHTML='';return;}
+  const needsPass=syncPaused();
   bar.innerHTML=`<div class="ut">⚠️ ${esc(t('syncpaused'))}</div>
-    <button class="ub" onclick="askSyncPass()">${esc(t('reconnect'))}</button>`;
+    <button class="ub" onclick="${needsPass?'askSyncPass()':'tryReconnect(true)'}">${
+      esc(needsPass?t('reconnect'):t('retry'))}</button>`;
   bar.classList.add('show');
 }
 function updateCloudBadge(){
@@ -1105,7 +1135,7 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',retry:'ආයෙත් try කරන්න',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
@@ -1179,7 +1209,7 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',retry:'Retry',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
@@ -3464,8 +3494,12 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
 /* An installed PWA can sit resumed across a month boundary without ever
    reloading, so recurring expenses are caught up on resume too. */
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&S&&S._auth)catchUpRecurring();
+  if(document.hidden)return;
+  if(S&&S._auth)catchUpRecurring();
+  if(canRetrySync())tryReconnect(true);
 });
+// A connection that comes back should be used at once, not after the backoff.
+window.addEventListener('online',()=>{if(canRetrySync())tryReconnect(true);});
 </script>
 </body>
 </html>

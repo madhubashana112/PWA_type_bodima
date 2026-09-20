@@ -178,6 +178,74 @@ async function strandedPhone(b, s, store) {
     await ctx.close();
   }
 
+  s.section('6. a connection that fails at boot recovers by itself');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    s.check('connected to begin with', await page.evaluate(() => cloud.on === true));
+    // Drop the connection the way a phone on a bad signal does: no listeners,
+    // no .info/connected, nothing watching for the network to come back.
+    await page.evaluate(() => { detachCloud(); syncTried = true; drawView(); });
+    await page.waitForTimeout(300);
+    s.check('the app knows it is not syncing', await page.evaluate(() => notSyncing()));
+    s.check('and says so, even though it has a path',
+            await page.evaluate(() => document.getElementById('syncbar').classList.contains('show')));
+    s.check('the button offers a retry, not a password prompt',
+            (await page.textContent('#syncbar .ub')).toLowerCase().includes('retry'),
+            await page.textContent('#syncbar .ub'));
+
+    // An expense added while stranded must still go up once it reconnects.
+    await page.evaluate(() => {
+      S.expenses.unshift({ id: 'late1', desc: 'Kottu', amount: 700, payer: 'm1',
+                           parts: ['m1', 'm2'], date: Date.now() });
+      save();
+    });
+    await page.click('#syncbar .ub');
+    await page.waitForTimeout(900);
+    s.check('retrying reconnects', await page.evaluate(() => cloud.on === true));
+    s.check('the warning clears', !(await page.evaluate(() =>
+            document.getElementById('syncbar').classList.contains('show'))));
+    s.check('the expense added while stranded reached the house', await page.evaluate(() => {
+      const k = Object.keys(window.__store.h)[0];
+      return !!window.__store.h[k].expenses.late1;
+    }));
+    await ctx.close();
+  }
+
+  s.section('7. coming back online reconnects without being asked');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    await page.evaluate(() => { detachCloud(); syncTried = true; drawView(); });
+    await page.waitForTimeout(250);
+    s.check('stranded', await page.evaluate(() => notSyncing()));
+    // The browser reporting the network back should not wait out the backoff.
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await page.waitForTimeout(900);
+    s.check('reconnected on its own', await page.evaluate(() => cloud.on === true));
+    s.check('no warning left', !(await page.evaluate(() =>
+            document.getElementById('syncbar').classList.contains('show'))));
+    await ctx.close();
+  }
+
+  s.section('8. a retry is scheduled, and backs off rather than hammering');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    const backoff = await page.evaluate(() => {
+      detachCloud();
+      const waits = [];
+      const realSet = window.setTimeout;
+      window.setTimeout = (fn, ms) => { if (ms >= 5000) waits.push(ms); return realSet(() => {}, 999999); };
+      for (let i = 0; i < 5; i++) { reconnectTimer = null; reconnectTries = i; scheduleReconnect(); }
+      window.setTimeout = realSet;
+      return waits;
+    });
+    s.check('waits grow', backoff.length === 5 && backoff.every((w, i) => !i || w >= backoff[i - 1]), backoff);
+    s.check('and are capped', Math.max(...backoff) <= 60000, backoff);
+    s.check('nothing is scheduled once there is nothing to retry',
+            await page.evaluate(() => { clearReconnect(); cloud.on = true;
+              scheduleReconnect(); return reconnectTimer === null; }));
+    await ctx.close();
+  }
+
   await b.close();
   s.finish();
 })();
