@@ -1073,6 +1073,7 @@ function scheduleReconnect(){
 function tryReconnect(manual){
   if(manual){clearReconnect();syncTried=true;}
   if(!canRetrySync()){updateCloudBadge();return;}
+  const wasManual=!!manual;
   cloud.status='connecting';updateCloudBadge();
   ensureFirebase(ok=>{
     syncTried=true;
@@ -1080,6 +1081,8 @@ function tryReconnect(manual){
     connectHouse(S.cpath,true).then(
       ()=>{cloud.lastError='';cloud.denied=false;clearReconnect();updateCloudBadge();},
       e=>{noteCloudError(e);cloud.on=false;updateCloudBadge();
+          // A refusal fails instantly, so a tap looked like a dead button.
+          if(wasManual)toast(cloudErrorText());
           if(!cloud.denied)scheduleReconnect();});
   });
 }
@@ -1545,8 +1548,25 @@ function claimName(house){
 /* Copy a house off the guessable houses/<name> path onto its private one.
    The old node is only cleared once the copy has actually landed, so a failed
    or half-finished move never loses data. */
-function moveHouseToPrivatePath(oldRef,newRef,data,house){
-  return withTimeout(newRef.set(data),10000).then(()=>{
+/* The old node still carries meta.pass — the plaintext the hardened rules
+   exist to forbid — so copying it verbatim would be rejected by the very
+   rules meant to protect this migration. Rebuild the tree clean instead:
+   hashed meta, id-keyed collections, nothing else. */
+function sanitizedTree(data,plainPass){
+  const out=readCloudSnapshot(data);
+  const meta={house:out.house||S.house||'',lang:out.lang||S.lang||'en'};
+  if(out.passHash&&out.passSalt){meta.passHash=out.passHash;meta.passSalt=out.passSalt;}
+  else if(plainPass)setPass(meta,plainPass);
+  else{meta.passHash=S.passHash||'';meta.passSalt=S.passSalt||'';}
+  if(!meta.passHash||!meta.passSalt)return null;   // never write a house nobody can open
+  const tree={meta:{house:meta.house,passHash:meta.passHash,passSalt:meta.passSalt,lang:meta.lang}};
+  CLOUD_COLLS.forEach(c=>tree[c]=collMap(out[c]));
+  return JSON.parse(JSON.stringify(tree));
+}
+function moveHouseToPrivatePath(oldRef,newRef,data,house,plainPass){
+  const tree=sanitizedTree(data,plainPass);
+  if(!tree)return Promise.reject(new Error('no password for this house'));
+  return withTimeout(newRef.set(tree),10000).then(()=>{
     // The copy landed, so clearing the old node is safe. Those two writes are
     // allowed to finish in the background; the login no longer depends on them.
     oldRef.set({moved:1,at:Date.now()}).catch(()=>{});
@@ -1593,7 +1613,7 @@ function doLogin(){
           const od=os.val();
           if(od&&!od.moved){
             if(!verifyPass(cloudPassRec(od),v)){authBusy(false);authError(tA('wrong'));return;}
-            return moveHouseToPrivatePath(oldRef,ref,od,h).then(()=>{
+            return moveHouseToPrivatePath(oldRef,ref,od,h,v).then(()=>{
               authBusy(false);adoptCloudHouse(ref,path,od,v);
             },()=>{
               // Could not copy the house across; leave the original alone and

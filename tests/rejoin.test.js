@@ -299,6 +299,63 @@ async function strandedPhone(b, s, store) {
     await ctx.close();
   }
 
+  s.section('11. the migrated copy is clean enough for the hardened rules');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    const node = await page.evaluate(() => {
+      const k = Object.keys(window.__store.h)[0];
+      return JSON.parse(JSON.stringify(window.__store.h[k]));
+    });
+    // database.rules.json marks meta.pass and any unknown child .validate:false,
+    // so copying the old node verbatim would be rejected on write.
+    s.check('no plaintext password in the copy', node.meta.pass === undefined, node.meta);
+    s.check('the copy is hashed', /^[0-9a-f]{64}$/.test(node.meta.passHash || ''), node.meta);
+    s.check('the salt matches the rule pattern', /^[0-9a-f]{8,64}$/.test(node.meta.passSalt || ''), node.meta);
+    s.check('meta carries only what the rules allow',
+            Object.keys(node.meta).sort().join() === 'house,lang,passHash,passSalt', Object.keys(node.meta));
+    const allowed = ['meta', 'members', 'expenses', 'settles', 'archives', 'activity', 'debts', 'recurring'];
+    s.check('no stray top-level keys', Object.keys(node).every(k => allowed.includes(k)), Object.keys(node));
+    s.check('every record is keyed by its own id', await page.evaluate(() => {
+      const k = Object.keys(window.__store.h)[0], n = window.__store.h[k];
+      return ['members', 'expenses'].every(c =>
+        Object.keys(n[c] || {}).every(id => n[c][id].id === id));
+    }));
+    s.check('the house data came across', !!(node.expenses && node.expenses.e1), Object.keys(node.expenses || {}));
+    await ctx.close();
+  }
+
+  s.section('12. a refusal gives feedback when the button is pressed');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    await page.evaluate(() => {
+      detachCloud(); syncTried = true;
+      // Make every read fail the way a denying database does. This has to be
+      // patched on firebase.database itself: ensureFirebase reassigns cloud.db
+      // from it on each attempt, discarding anything patched onto the old one.
+      const realDb = window.firebase.database.bind(window.firebase);
+      window.firebase.database = () => {
+        const db = realDb();
+        const realRef = db.ref.bind(db);
+        db.ref = p => { const r = realRef(p);
+          r.once = () => Promise.reject(new Error('permission_denied at /: Client does not have permission'));
+          return r; };
+        return db;
+      };
+      drawView();
+    });
+    await page.waitForTimeout(250);
+    await page.click('#syncbar .ub');
+    await page.waitForTimeout(900);
+    const toast = await page.evaluate(() => {
+      const t = document.getElementById('toast');
+      return { shown: t.classList.contains('show'), text: t.textContent };
+    });
+    s.check('the tap is acknowledged rather than silent', toast.shown, toast);
+    s.check('and it says the database refused', toast.text.toLowerCase().includes('refused'), toast);
+    s.check('still flagged as denied', await page.evaluate(() => cloud.denied === true));
+    await ctx.close();
+  }
+
   await b.close();
   s.finish();
 })();
