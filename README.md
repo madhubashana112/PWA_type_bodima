@@ -17,8 +17,9 @@ is no build step, no bundler and no server to run.
 - **Recurring monthly expenses** for rent, wifi and the gas bill.
 - **"Money I owe"** — debts to people outside the house, with part payments
   and due dates, shared with the rest of the house.
-- **Reports** by day, week or month, with a spend chart, a trend, a private
-  personal budget, and CSV export for a spreadsheet.
+- **Reports** by day, week or month, with a where-it-went donut, a per-person
+  spend chart, a trend, a private personal budget, and CSV export for a
+  spreadsheet.
 - **Month close** that files everything into an archive and starts fresh.
 - **Search and filters** over the history by text, person and period.
 - **Offline** — the app opens and works with no connection; changes sync when

@@ -56,6 +56,15 @@ split is distributed by largest remainder so the parts add up to the total
 **exactly** — no fractional cents, which used to surface as a stray `+Rs.2`
 nobody could settle.
 
+### Categories
+
+There is no category field. Asking someone to pick one for a Rs.200 packet of
+rice is a field too many, so a description is matched against the patterns in
+`CATEGORIES` — the same match that has always chosen the row emoji. The first
+pattern to match wins, and anything unmatched is `other`. The report's donut
+groups spend this way; nothing is stored, so re-classifying is only ever a
+change to that table.
+
 ### Settle
 
 A payment from one member to another. A settle carrying `expId` is a

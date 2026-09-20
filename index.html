@@ -330,6 +330,24 @@ textarea.in{resize:none;min-height:46px}
 .smode button.on{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px -3px rgba(34,29,51,.25)}
 .smodesub{font-size:12px;color:var(--muted);margin:-3px 2px 10px;font-weight:600}
 
+/* spend-by-category donut */
+.donutwrap{position:relative;width:200px;max-width:74vw;margin:2px auto 4px;aspect-ratio:1}
+.donut{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.dslice{cursor:pointer;transition:stroke-width .22s cubic-bezier(.2,.8,.2,1)}
+.dmid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;pointer-events:none;line-height:1.15}
+.dmid .dm-e{font-size:18px;margin-bottom:2px}
+.dmid .dm-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.dmid .dm-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
+.dmid .dm-p{font-size:11px;font-weight:700;color:var(--muted)}
+.dlegend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
+.dlg{display:inline-flex;align-items:center;gap:6px;background:var(--line2);border:1px solid transparent;
+  border-radius:11px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);transition:.18s}
+.dlg.on{background:var(--paper);border-color:var(--line);box-shadow:var(--shadow-sm)}
+.dlg b{font-weight:800;font-size:11.5px}
+.dlg .dot{width:9px;height:9px;border-radius:50%;flex:none}
+
 /* "repeats monthly" toggle in the expense sheet */
 .recrow{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);
   border-radius:14px;padding:11px 13px;margin:4px 0 14px;cursor:pointer;transition:.2s}
@@ -350,11 +368,11 @@ textarea.in{resize:none;min-height:46px}
 .searchrow{position:relative;display:flex;align-items:center;margin-bottom:10px}
 .searchrow .si{position:absolute;left:13px;font-size:15px;pointer-events:none;opacity:.6}
 .searchrow .sx{position:absolute;right:8px;width:28px;height:28px;border-radius:9px;color:var(--muted);font-size:14px}
-.sin{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:13px;
+.srchin{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:13px;
   padding:12px 14px 12px 38px;font-size:14.5px;font-weight:600;color:var(--ink);transition:.2s}
-.sin::placeholder{color:var(--muted);font-weight:500}
-.sin:focus{border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-sf)}
-.sin::-webkit-search-cancel-button{display:none}
+.srchin::placeholder{color:var(--muted);font-weight:500}
+.srchin:focus{border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-sf)}
+.srchin::-webkit-search-cancel-button{display:none}
 .selin{padding-left:14px;margin-bottom:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
   background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
@@ -998,7 +1016,7 @@ const L={
   pickpart:'අඩුම තරමේ එක්කෙනෙක්වත් තෝරන්න',addedm:'එකතු කළා',nomem2:'වියදම් දාන්න කලින් සාමාජිකයෝ එකතු කරන්න',
   paysettle:' ගෙව්වා කියලා සටහන් වුණා',gets:'ලැබෙන්න',pays:'ගෙවන්න',ppl:'දෙනෙක්',
   editexp:'වියදම සංස්කරණය',edit:'සංස්කරණය',update:'යාවත්කාලීන කරන්න',updated:'යාවත්කාලීන කළා ✓',delbtn:'අයින් කරන්න',
-  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',
+  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',bycat:'මොනවටද වියදම් වුණේ',
   totexp:'වියදම් ගණන',avgper:'එක්කෙනෙකුට සාමා.',expn:'වියදම්',
   rep_day:'අද',rep_week:'සතිය',rep_month:'මාසය',daytrend:'දවස් 7ක වියදම්',weektrend:'සති 6ක වියදම්',
   noperiod:'මේ කාලයට වියදමක් නෑ',
@@ -1072,7 +1090,7 @@ const L={
   pickpart:'Select at least one person',addedm:'Added',nomem2:'Add members before adding expenses',
   paysettle:' marked as paid',gets:'gets back',pays:'owes',ppl:'people',
   editexp:'Edit expense',edit:'Edit',update:'Update',updated:'Updated ✓',delbtn:'Delete',
-  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',
+  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',bycat:'Where it went',
   totexp:'Expenses',avgper:'Avg / person',expn:'expenses',
   rep_day:'Today',rep_week:'Week',rep_month:'Month',daytrend:'Last 7 days',weektrend:'Last 6 weeks',
   noperiod:'No expenses in this period',
@@ -1659,15 +1677,33 @@ function expRow(e){
     <div class="right"><div class="tot">${fmt(e.amount)}</div><div class="per">${perTxt}</div>${prog}</div>
   </div>`;
 }
-function emojiFor(d){d=String(d||'').toLowerCase();
-  if(/කෑම|food|බත|rice|dinner|lunch|breakfast|hopper|kottu|කොත්|rice|meal|hotel|kade|කඩ/.test(d))return '🍛';
-  if(/tea|තේ|coffee|කෝපි|milk|කිරි/.test(d))return '☕';
-  if(/සබන්|soap|දත්|tooth|shampoo|brush|clean|toilet/.test(d))return '🧼';
-  if(/water|වතුර|bill|gas|electric|විදුලි|rent|කුලී/.test(d))return '🧾';
-  if(/bus|three|tuk|travel|trip|fuel|petrol/.test(d))return '🚌';
-  if(/egg|බිත්තර|veg|එළ|fruit|පළ/.test(d))return '🥚';
-  return '🛒';
+/* ---- categories ----
+   The app never asks anyone to pick a category — that would be one more field
+   to fill in for a Rs.200 packet of rice. Instead a description is matched
+   against these patterns, which is also where the row emoji has always come
+   from. Order matters: the first match wins. */
+const CATEGORIES=[
+  {key:'food',   e:'🍛', color:'#F0573C', si:'කෑම',        en:'Food',
+   re:/කෑම|food|බත|rice|dinner|lunch|breakfast|hopper|kottu|කොත්|meal|hotel|kade|කඩ/},
+  {key:'tea',    e:'☕', color:'#E67E22', si:'තේ/කෝපි',    en:'Tea & coffee',
+   re:/tea|තේ|coffee|කෝපි|milk|කිරි/},
+  {key:'clean',  e:'🧼', color:'#0FB5BA', si:'පිරිසිදු කිරීම', en:'Household',
+   re:/සබන්|soap|දත්|tooth|shampoo|brush|clean|toilet/},
+  {key:'bills',  e:'🧾', color:'#F2B544', si:'බිල්පත්',      en:'Bills & rent',
+   re:/water|වතුර|bill|gas|electric|විදුලි|rent|කුලී/},
+  {key:'travel', e:'🚌', color:'#2D98DA', si:'ගමන්',        en:'Travel',
+   re:/bus|three|tuk|travel|trip|fuel|petrol/},
+  {key:'fresh',  e:'🥚', color:'#16A074', si:'එළවළු/පළතුරු', en:'Groceries',
+   re:/egg|බිත්තර|veg|එළ|fruit|පළ/},
+  {key:'other',  e:'🛒', color:'#6C5CE7', si:'වෙනත්',       en:'Other', re:null}
+];
+function categoryOf(desc){
+  const d=String(desc||'').toLowerCase();
+  for(const c of CATEGORIES){if(!c.re||c.re.test(d))return c;}
+  return CATEGORIES[CATEGORIES.length-1];
 }
+function catLabel(c){return S.lang==='si'?c.si:c.en;}
+function emojiFor(d){return categoryOf(d).e;}
 
 /* ---------- BALANCES ---------- */
 function viewBal(){
@@ -1949,14 +1985,14 @@ function viewHist(){
       <span><span class="link" style="margin-right:12px" onclick="openRecurring()">🔁 ${(S.recurring||[]).length||''}</span><span class="link" id="histCount">${histCountLabel()}</span></span></div>
     <div class="searchrow">
       <span class="si">🔍</span>
-      <input id="histQ" class="sin" type="search" autocomplete="off" placeholder="${t('searchph')}"
+      <input id="histQ" class="srchin" type="search" autocomplete="off" placeholder="${t('searchph')}"
         value="${esc(hist.q)}" oninput="onHistSearch(this.value)">
       ${hist.q?`<button class="sx" onclick="onHistSearch('');document.getElementById('histQ').value=''">✕</button>`:''}
     </div>
     <div class="smode" id="histChips" style="margin-bottom:10px">
       ${periods.map(([k,lbl])=>`<button data-period="${k}" class="${hist.period===k?'on':''}" onclick="setHistPeriod('${k}')">${lbl}</button>`).join('')}
     </div>
-    <select class="sin selin" id="histWho" onchange="setHistMember(this.value)">
+    <select class="srchin selin" id="histWho" onchange="setHistMember(this.value)">
       <option value=""${hist.member?'':' selected'}>👥 ${t('f_anyone')}</option>
       ${S.members.map(m=>`<option value="${m.id}"${hist.member===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}
     </select>
@@ -2070,6 +2106,75 @@ function chartHtml(members,cons){
       <div class="cval">${fmt(v)}</div></div>`;
   }).join('')+`</div>`;
 }
+
+/* ---- spend-by-category donut ----
+   Drawn as one SVG circle per slice, using stroke-dasharray to expose just
+   that slice's arc. No chart library: the app has to work with no connection
+   and ships as a single file. */
+let catPick=null;               // which slice the center is describing
+function spendByCategory(exps){
+  const totals={};
+  (exps||[]).forEach(e=>{
+    const k=categoryOf(e.desc).key;
+    totals[k]=(totals[k]||0)+Math.round(e.amount);
+  });
+  return CATEGORIES
+    .map(c=>({cat:c,value:totals[c.key]||0}))
+    .filter(x=>x.value>0)
+    .sort((a,b)=>b.value-a.value);
+}
+function setCat(key){
+  catPick=(catPick===key)?null:key;
+  const box=document.getElementById('catDonut');
+  if(box)box.innerHTML=donutInner(spendByCategory(periodExpenses(reportPeriod)));
+  else drawView();
+}
+function donutInner(slices){
+  const total=slices.reduce((a,x)=>a+x.value,0);
+  if(!total)return '';
+  const R=54,C=2*Math.PI*R;
+  // Default to the largest slice, the way the screenshot leads with its
+  // biggest category, but keep an explicit pick if there is one.
+  let sel=slices.find(x=>x.cat.key===catPick)||slices[0];
+  let at=0;
+  const arcs=slices.map(x=>{
+    const on=x===sel;
+    const len=(x.value/total)*C;
+    // A 1px gap keeps neighbouring slices readable; not on a lone full ring.
+    const gap=slices.length>1?1:0;
+    const seg=`<circle class="dslice${on?' on':''}" cx="70" cy="70" r="${R}" fill="none"
+      stroke="${x.cat.color}" stroke-width="${on?26:20}"
+      stroke-dasharray="${Math.max(len-gap,0).toFixed(2)} ${(C-Math.max(len-gap,0)).toFixed(2)}"
+      stroke-dashoffset="${(-at).toFixed(2)}"
+      onclick="setCat('${x.cat.key}')"></circle>`;
+    at+=len;
+    return seg;
+  }).join('');
+  const pct=Math.round(sel.value/total*100);
+  return `<div class="donutwrap">
+      <svg viewBox="0 0 140 140" class="donut" role="img"
+        aria-label="${esc(catLabel(sel.cat))} ${fmt(sel.value)}, ${pct}%">${arcs}</svg>
+      <div class="dmid">
+        <div class="dm-e">${sel.cat.e}</div>
+        <div class="dm-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
+        <div class="dm-v">${fmt(sel.value)}</div>
+        <div class="dm-p">${pct}%</div>
+      </div>
+    </div>
+    <div class="dlegend">${slices.map(x=>`
+      <button class="dlg${x.cat.key===sel.cat.key?' on':''}" onclick="setCat('${x.cat.key}')">
+        <span class="dot" style="background:${x.cat.color}"></span>
+        <span class="${S.lang==='si'?'sin':''}">${esc(catLabel(x.cat))}</span>
+        <b>${fmt(x.value)}</b>
+      </button>`).join('')}</div>`;
+}
+function categoryChartHtml(exps){
+  const slices=spendByCategory(exps);
+  if(!slices.length)return '';
+  return `<div class="sec-title" style="margin-top:20px">🍩 ${t('bycat')}</div>
+    <div class="card" style="padding:18px 15px 14px" id="catDonut">${donutInner(slices)}</div>`;
+}
+
 /* ---- period helpers for daily/weekly/monthly reports ---- */
 function startOfDay(ts){const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime();}
 function startOfWeek(ts){const d=new Date(ts);d.setHours(0,0,0,0);const dow=(d.getDay()+6)%7;/*Mon=0*/d.setDate(d.getDate()-dow);return d.getTime();}
@@ -2163,7 +2268,7 @@ function saveBudget(){
 }
 function clearBudget(){setMyBudget(0);closeSheet();toast(t('deleted'));drawView();}
 let reportPeriod='month';   // 'day' | 'week' | 'month'
-function setReportPeriod(p){reportPeriod=p;drawView();}
+function setReportPeriod(p){reportPeriod=p;catPick=null;drawView();}
 function viewReport(){
   if(!S.members.length)return emptyMembers();
   const exps=periodExpenses(reportPeriod);
@@ -2191,6 +2296,7 @@ function viewReport(){
   if(!cnt){
     h+=`<div class="card" style="margin-top:18px"><div class="empty"><div class="em">📊</div><div class="t">${t('noperiod')}</div></div></div>`;
   }else{
+    h+=categoryChartHtml(exps);
     h+=`<div class="sec-title" style="margin-top:20px">${t('spentby')}</div>`;
     h+=`<div class="card" style="padding:16px 15px">${chartHtml(S.members,consumedByMember(exps,S.members))}</div>`;
     h+=`<button class="addbtn" style="background:var(--ink);color:#fff;margin-top:18px" onclick="exportCsv()">⬇️ ${t('csvexport')}</button>`;
