@@ -264,6 +264,15 @@ textarea.in{resize:none;min-height:46px}
   transition:.3s;box-shadow:var(--shadow);white-space:nowrap;max-width:90%}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* "a new version is ready" bar */
+#updbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border-radius:16px;padding:12px 13px 12px 16px;box-shadow:var(--shadow);
+  animation:rise .35s both}
+#updbar.show{display:flex}
+#updbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
+#updbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
+#updbar .ux{color:#9a93ad;font-size:19px;padding:0 4px;line-height:1}
+
 /* custom confirm */
 .cfm-bg{position:fixed;inset:0;background:rgba(20,16,30,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   z-index:300;display:flex;align-items:center;justify-content:center;padding:30px;opacity:0;transition:opacity .2s}
@@ -444,6 +453,7 @@ textarea.in{resize:none;min-height:46px}
 </div>
 <div id="app"></div>
 <div id="toast"></div>
+<div id="updbar"></div>
 <div id="cfmRoot"></div>
 
 <!-- Firebase SDK v10.12.2 (bundled so the app works without internet) -->
@@ -924,7 +934,7 @@ const L={
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
-  houseexists:'මේ නමින් බෝඩිමක් cloud එකේ දැනටමත් තියෙනවා — login වෙන්න',enablesync:'මේ බෝඩිම cloud එකට sync කරන්න',syncpassnote:'බෝඩිමේ රහස් අංකය දාන්න — cloud එකේ තැන හදන්නේ ඒකෙන්.',
+  houseexists:'මේ නමින් බෝඩිමක් cloud එකේ දැනටමත් තියෙනවා — login වෙන්න',updready:'අලුත් version එකක් ready',updnow:'Update',enablesync:'මේ බෝඩිම cloud එකට sync කරන්න',syncpassnote:'බෝඩිමේ රහස් අංකය දාන්න — cloud එකේ තැන හදන්නේ ඒකෙන්.',
   syncpushed:'Cloud එකට sync කළා ✅',cfgsaved:'Config save කළා',cloudnote:'හැමෝම එකම Firebase config එකයි බෝඩිමේ නම/password එකයි දාලා sync වෙනවා. දත්ත සැබෑ-කාලීනව (real-time) යාවත්කාලීන වෙනවා.',
   cloudhow:'සකස් කරන හැටි',needlogin:'මුලින් login වෙන්න',
   backup:'Backup & Restore',bkTitle:'දත්ත Backup එක',bkSub:'ඔයාගේ මුළු බෝඩිමේ දත්තම එක file එකකට save කරගන්න. Phone එක format කළත්, cloud එක නැති වුණත් ආපහු ගේන්න පුළුවන්.',
@@ -998,7 +1008,7 @@ const L={
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
-  houseexists:'A house with this name already exists in cloud — please log in',enablesync:'Sync this house to cloud',syncpassnote:'Enter the house password — the cloud location is derived from it.',
+  houseexists:'A house with this name already exists in cloud — please log in',updready:'A new version is ready',updnow:'Update',enablesync:'Sync this house to cloud',syncpassnote:'Enter the house password — the cloud location is derived from it.',
   syncpushed:'Synced to cloud ✅',cfgsaved:'Config saved',cloudnote:'Everyone uses the same Firebase config plus the house name & password to sync. Data updates in real-time across phones.',
   cloudhow:'How to set up',needlogin:'Please log in first',
   backup:'Backup & Restore',bkTitle:'Backup your data',bkSub:'Save your whole house to a file. Restore it even if the phone is wiped or the cloud is lost.',
@@ -2657,9 +2667,49 @@ reconnectCloud();
 setTimeout(hideSplash,900);
 window.addEventListener('load',()=>setTimeout(hideSplash,700));
 
-/* ---- PWA: register service worker (only when served over http/https) ---- */
+/* ================= APP UPDATES =================
+   A new service worker installs alongside the running one and then waits, so
+   the swap never happens under someone who is part-way through adding an
+   expense. We show a bar instead and let them choose the moment. */
+let swReg=null,swReloading=false,updateAccepted=false;
+function showUpdateBar(worker){
+  const bar=document.getElementById('updbar');if(!bar||!worker)return;
+  bar.innerHTML=`<div class="ut">✨ ${esc(t('updready'))}</div>
+    <button class="ub" id="updGo">${esc(t('updnow'))}</button>
+    <button class="ux" onclick="document.getElementById('updbar').classList.remove('show')">✕</button>`;
+  bar.classList.add('show');
+  document.getElementById('updGo').onclick=()=>{
+    bar.classList.remove('show');
+    updateAccepted=true;
+    worker.postMessage({type:'SKIP_WAITING'});
+  };
+}
+function watchWorker(reg){
+  if(reg.waiting&&navigator.serviceWorker.controller)showUpdateBar(reg.waiting);
+  reg.addEventListener('updatefound',()=>{
+    const w=reg.installing;if(!w)return;
+    w.addEventListener('statechange',()=>{
+      // "installed" with a controller already present means this is an update,
+      // not the very first install.
+      if(w.state==='installed'&&navigator.serviceWorker.controller)showUpdateBar(w);
+    });
+  });
+}
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    // The very first worker claims the page too; only an update the user
+    // actually accepted should reload it.
+    if(!updateAccepted||swReloading)return;
+    swReloading=true;location.reload();
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{swReg=reg;watchWorker(reg);}).catch(()=>{});
+  });
+  // An installed PWA can sit resumed for days without ever navigating, so
+  // check for a new build whenever it comes back to the foreground.
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&swReg)swReg.update().catch(()=>{});
+  });
 }
 </script>
 </body>
