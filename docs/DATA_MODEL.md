@@ -123,12 +123,39 @@ These are deliberately outside `S` and never sync.
 |---|---|
 | `bodime_me` | which member this device is, for "you owe" framing |
 | `bodime_budget_v1` | a private monthly budget, per identity |
+| `bodime_personal_v1` | personal expenses, per identity |
 | `bodime_lang` | language chosen before logging in |
 | `bodime_fb_cfg` | a user-supplied Firebase config, when none is built in |
 | `bodime_debts_v1` | legacy private debts, migrated once then left alone |
 
 History search and filter state is in-memory only, so how one person is
 browsing never reaches anyone else.
+
+### Personal expenses
+
+A haircut, your own lunch, clothes — things that settle nothing and are
+nobody else's business. They are keyed by `privateOwner()`, the same
+per-identity key the budget uses, so two housemates sharing a phone do not
+see each other's:
+
+```js
+{ id, desc, amount, date }
+```
+
+They are deliberately not in `S`, so they never reach the cloud and never
+appear in the house's totals, history or balances. They do count towards the
+report's **Mine** scope and towards the monthly budget, which is what "my
+monthly spending" was always meant to be.
+
+Because they live outside `S`, the JSON backup carries them explicitly under
+`personal` (and the budget under `budget`) — otherwise a reinstall would lose
+them. That does mean the backup file contains private entries, which the
+backup sheet warns about before you export.
+
+`mineAsExpenses(period)` is what the Mine scope charts: one row per house
+expense holding only your share, plus your personal entries at face value. It
+filters shares through the same valid-member map `consumedByMember` uses, so
+the rows and the "my share" tile cannot disagree once someone has left.
 
 ## Cloud layout
 
@@ -194,3 +221,19 @@ Each runs once and is idempotent.
 | `migrateLocalDebts` | folds once-private debts into the shared list |
 | `migrateCloudFormat` | rewrites an old whole-house blob as child records |
 | `moveHouseToPrivatePath` | copies a house off `houses/<name>`, then tombstones it |
+
+`migrateStoredPass` also derives `cpath` while the plaintext is still in hand:
+that is the only moment it can, and without it a phone that was already
+logged in came back from the update with no path and stopped syncing.
+
+`connectHouse(path)` is how both boot and a manual reconnect attach. It takes
+the private path when that holds something, and otherwise looks for the house
+on the old `houses/<name>` path and moves it. Writing to the private path
+without that check would upload a second copy of the house beside the one
+everyone else is still using.
+
+Rejoining merges rather than replaces: `mergeCloudInto` takes everything the
+cloud has that this device lacks and keeps everything it already had, then
+`cloudFlush()` sends the difference up. `applyCloud` replaces state wholesale,
+which is right for a live update and wrong for a device rejoining after a
+spell on its own — it would drop whatever was recorded while it was alone.

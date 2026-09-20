@@ -72,6 +72,13 @@ async function open(browser, s, store) {
 
 async function install(page, store) {
   await page.evaluate(FAKE);
+  // The page booted with the bundled SDK before the stub landed, so any
+  // connection it started points at the real thing. Drop it, or the suite is
+  // testing against half-real state.
+  await page.evaluate(() => {
+    try { if (typeof detachCloud === 'function') detachCloud(); } catch (e) {}
+    if (typeof cloud === 'object' && cloud) { cloud.db = null; cloud.status = 'off'; }
+  });
   if (store) await page.evaluate(seed => {
     window.__store = seed;
     if (!seed['.info']) seed['.info'] = { connected: true };

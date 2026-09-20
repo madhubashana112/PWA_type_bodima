@@ -266,13 +266,15 @@ textarea.in{resize:none;min-height:46px}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* "a new version is ready" bar */
-#updbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
+#updbar,#syncbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
   background:var(--ink);color:#fff;border-radius:16px;padding:12px 13px 12px 16px;box-shadow:var(--shadow);
   animation:rise .35s both}
-#updbar.show{display:flex}
-#updbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
-#updbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
+#updbar.show,#syncbar.show{display:flex}
+#updbar .ut,#syncbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
+#updbar .ub,#syncbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
 #updbar .ux{color:#9a93ad;font-size:19px;padding:0 4px;line-height:1}
+#updbar.show ~ #syncbar.show{bottom:152px}   /* stack, never overlap */
+#syncbar{background:#5b2416}
 
 /* custom confirm */
 .cfm-bg{position:fixed;inset:0;background:rgba(20,16,30,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
@@ -334,13 +336,13 @@ textarea.in{resize:none;min-height:46px}
 .donutwrap{position:relative;width:200px;max-width:74vw;margin:2px auto 4px;aspect-ratio:1}
 .donut{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
 .dslice{cursor:pointer;transition:stroke-width .22s cubic-bezier(.2,.8,.2,1)}
-.dmid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+.donutwrap .dn-mid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;pointer-events:none;line-height:1.15}
-.dmid .dm-e{font-size:18px;margin-bottom:2px}
-.dmid .dm-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
+.donutwrap .dn-e{font-size:18px;margin-bottom:2px}
+.donutwrap .dn-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.dmid .dm-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
-.dmid .dm-p{font-size:11px;font-weight:700;color:var(--muted)}
+.donutwrap .dn-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
+.donutwrap .dn-p{font-size:11px;font-weight:700;color:var(--muted)}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
 .dlg{display:inline-flex;align-items:center;gap:6px;background:var(--line2);border:1px solid transparent;
   border-radius:11px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);transition:.18s}
@@ -417,7 +419,7 @@ textarea.in{resize:none;min-height:46px}
 .owehero .sub{font-size:12.5px;opacity:.85;margin-top:2px}
 .debt{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line2)}
 .debt:last-child{border-bottom:none}
-.debt .dav{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0}
+.dav{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0}
 .debt .dmid{flex:1;min-width:0}
 .debt .dnm{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .debt .dmeta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -502,6 +504,7 @@ textarea.in{resize:none;min-height:46px}
 <div id="app"></div>
 <div id="toast"></div>
 <div id="updbar"></div>
+<div id="syncbar"></div>
 <div id="cfmRoot"></div>
 
 <!-- Firebase SDK v10.12.2 (bundled so the app works without internet) -->
@@ -660,7 +663,14 @@ function migrateWholeRupees(d){
    cloud. Replace it with a salted hash the first time we see it. */
 function migrateStoredPass(d){
   if(!d)return d;
-  if(!d.passHash&&d.pass!==undefined&&d.pass!==null)setPass(d,d.pass);
+  if(d.pass!==undefined&&d.pass!==null){
+    // This is the only moment the plaintext is still in hand, and the cloud
+    // path is derived from it. Without this an already-logged-in device came
+    // back from the update with no path, so reconnectCloud() gave up and the
+    // phone quietly went local-only.
+    if(!d.cpath&&d.house)d.cpath=housePath(d.house,d.pass);
+    if(!d.passHash)setPass(d,d.pass);
+  }
   delete d.pass;
   return d;
 }
@@ -673,12 +683,40 @@ function setMeId(id){try{id?localStorage.setItem(ME_KEY,id):localStorage.removeI
 function me(){const id=getMeId();return id?S.members.find(m=>m.id===id)||null:null;}
 function meName(){const m=me();return m?m.name:(S.lang==='si'?'කවුරුහරි':'Someone');}
 
-/* ---- personal budget : PRIVATE per device-identity, never synced ---- */
+/* ---- PRIVATE per device-identity, never synced ----
+   Two things belong to the person holding the phone rather than to the house:
+   their monthly budget, and the expenses they made on themselves. Neither is
+   in S, so neither is ever written to the cloud. */
+function privateOwner(){return getMeId()||'_local';}
+
 const BUDGET_KEY='bodime_budget_v1';
-function budgetOwner(){return getMeId()||'_local';}
 function loadBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY)||'{}')||{};}catch(e){return {};}}
-function myBudget(){const o=loadBudgets()[budgetOwner()];return o&&o.monthly?Math.round(o.monthly):0;}
-function setMyBudget(amt){const s=loadBudgets();s[budgetOwner()]={monthly:Math.round(amt)||0};try{localStorage.setItem(BUDGET_KEY,JSON.stringify(s));}catch(e){}}
+function myBudget(){const o=loadBudgets()[privateOwner()];return o&&o.monthly?Math.round(o.monthly):0;}
+function setMyBudget(amt){const s=loadBudgets();s[privateOwner()]={monthly:Math.round(amt)||0};try{localStorage.setItem(BUDGET_KEY,JSON.stringify(s));}catch(e){}}
+
+/* ---- personal expenses ----
+   Things you spent on yourself: a haircut, your own lunch, clothes. They are
+   nobody else's business and they settle nothing, so they never leave this
+   device. They do count towards your own report and your budget, which is
+   what "my monthly spending" was always supposed to mean. */
+const PERSONAL_KEY='bodime_personal_v1';
+function loadPersonalStore(){try{return JSON.parse(localStorage.getItem(PERSONAL_KEY)||'{}')||{};}catch(e){return {};}}
+function savePersonalStore(o){try{localStorage.setItem(PERSONAL_KEY,JSON.stringify(o));}catch(e){}}
+function myPersonal(){
+  const list=loadPersonalStore()[privateOwner()];
+  return Array.isArray(list)?list.slice().sort((a,b)=>(b.date||0)-(a.date||0)):[];
+}
+function setMyPersonal(list){
+  const store=loadPersonalStore();
+  store[privateOwner()]=list;
+  savePersonalStore(store);
+}
+function personalById(id){return myPersonal().find(x=>x.id===id)||null;}
+function personalInPeriod(period){
+  const from=periodFrom(period);
+  return myPersonal().filter(x=>(x.date||0)>=from);
+}
+function personalTotal(period){return personalInPeriod(period).reduce((a,x)=>a+Math.round(x.amount||0),0);}
 
 /* ---- activity log ---- */
 function logAct(type,text,amount){
@@ -837,6 +875,34 @@ function applyCloud(out,notify){
   if(notify)notifyNew(prevTop);
   catchUpRecurring(true);
 }
+/* Used when a phone rejoins a house after a spell on its own: take everything
+   the cloud has that we lack, keep everything we have, and let cloudFlush()
+   push the difference back up. applyCloud() replaces state wholesale, which is
+   right for a live update and wrong here — it would drop every expense added
+   while this device was not syncing. */
+function mergeCloudInto(data){
+  const out=readCloudSnapshot(data);
+  cloud.applying=true;
+  if(out.house)S.house=out.house;
+  if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
+  if(out.lang)S.lang=out.lang;
+  let added=0;
+  CLOUD_COLLS.forEach(c=>{
+    if(!Array.isArray(S[c]))S[c]=[];
+    const have={};S[c].forEach(x=>{if(x&&x.id)have[x.id]=1;});
+    (out[c]||[]).forEach(x=>{if(x&&x.id&&!have[x.id]){S[c].push(x);added++;}});
+  });
+  S.expenses.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.settles.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.debts.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.activity.sort((a,b)=>(b.at||0)-(a.at||0));
+  S.archives.sort((a,b)=>(b.closedAt||0)-(a.closedAt||0));
+  delete S._rupees;migrateWholeRupees(S);
+  localStorage.setItem(KEY,JSON.stringify(S));
+  cloud.mirror=mirrorFromCloud(data);   // so the flush that follows sends our side
+  cloud.applying=false;
+  return added;
+}
 function cloudFlush(){
   if(!(cloud.on&&cloud.ref)||cloud.applying)return;
   const cur=snapshotColls();
@@ -967,7 +1033,7 @@ function reconnectCloud(){ // on boot, if already logged in with cloud config
   if(!(S&&S._auth&&cloud.cfg&&S.cpath))return;   // no remembered path → log in again
   ensureFirebase(ok=>{
     if(!ok)return;
-    cloud.ref=cloud.db.ref(S.cpath);cloud.on=true;cloudListen();
+    connectHouse(S.cpath,true).catch(()=>{cloud.on=false;updateCloudBadge();});
   });
 }
 /* What the app should say about syncing right now, worked out from the real
@@ -984,12 +1050,24 @@ function cloudStateLabel(st){
   return {off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),
           syncing:t('cloudsyncing'),offline:t('cloudoffline'),error:t('clouderr')}[st]||'';
 }
+/* A phone that is logged in and has a cloud config but no path cannot sync,
+   and the only clue used to be the word "off" behind the cloud icon. Since
+   everything typed into it stays on that phone, it says so out loud. */
+function syncPaused(){return !!(S&&S._auth&&cloud.cfg&&!S.cpath);}
+function renderSyncBar(){
+  const bar=document.getElementById('syncbar');if(!bar)return;
+  if(!syncPaused()){bar.classList.remove('show');bar.innerHTML='';return;}
+  bar.innerHTML=`<div class="ut">⚠️ ${esc(t('syncpaused'))}</div>
+    <button class="ub" onclick="askSyncPass()">${esc(t('reconnect'))}</button>`;
+  bar.classList.add('show');
+}
 function updateCloudBadge(){
   const b=document.getElementById('cloudBtn');if(!b)return;
   const st=cloudState();
   b.textContent={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
   b.title=t('cloud')+' — '+cloudStateLabel(st);
-  b.classList.toggle('warn',st==='offline'||st==='error');
+  b.classList.toggle('warn',st==='offline'||st==='error'||syncPaused());
+  renderSyncBar();
 }
 
 /* ================= I18N ================= */
@@ -1016,7 +1094,7 @@ const L={
   pickpart:'අඩුම තරමේ එක්කෙනෙක්වත් තෝරන්න',addedm:'එකතු කළා',nomem2:'වියදම් දාන්න කලින් සාමාජිකයෝ එකතු කරන්න',
   paysettle:' ගෙව්වා කියලා සටහන් වුණා',gets:'ලැබෙන්න',pays:'ගෙවන්න',ppl:'දෙනෙක්',
   editexp:'වියදම සංස්කරණය',edit:'සංස්කරණය',update:'යාවත්කාලීන කරන්න',updated:'යාවත්කාලීන කළා ✓',delbtn:'අයින් කරන්න',
-  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',bycat:'මොනවටද වියදම් වුණේ',
+  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',sc_house:'බෝඩිම',sc_mine:'මගේ',myspend:'මගේ වියදම',myshare:'බෝඩිමේ මගේ කොටස',personal:'පෞද්ගලික',personalone:'පෞද්ගලික',addp:'පෞද්ගලික වියදමක්',editp:'පෞද්ගලික වියදම',nopers:'පෞද්ගලික වියදම් නෑ',nopersS:'ඔයාට විතරක් කරපු වියදම් මෙතන දාන්න — කාටවත් පේන්නේ නෑ',personalnote:'මේක ඔයාගේ phone එකේ විතරයි. බෝඩිමේ අයට පේන්නේ නෑ, බෙදෙන්නෙත් නෑ.',delpconf:'මේ පෞද්ගලික වියදම අයින් කරන්නද?',csv_kind:'වර්ගය',csv_cat:'කාණ්ඩය',bycat:'මොනවටද වියදම් වුණේ',
   totexp:'වියදම් ගණන',avgper:'එක්කෙනෙකුට සාමා.',expn:'වියදම්',
   rep_day:'අද',rep_week:'සතිය',rep_month:'මාසය',daytrend:'දවස් 7ක වියදම්',weektrend:'සති 6ක වියදම්',
   noperiod:'මේ කාලයට වියදමක් නෑ',
@@ -1027,14 +1105,14 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
   houseexists:'මේ නමින් බෝඩිමක් cloud එකේ දැනටමත් තියෙනවා — login වෙන්න',updready:'අලුත් version එකක් ready',updnow:'Update',enablesync:'මේ බෝඩිම cloud එකට sync කරන්න',syncpassnote:'බෝඩිමේ රහස් අංකය දාන්න — cloud එකේ තැන හදන්නේ ඒකෙන්.',
   syncpushed:'Cloud එකට sync කළා ✅',cfgsaved:'Config save කළා',cloudnote:'හැමෝම එකම Firebase config එකයි බෝඩිමේ නම/password එකයි දාලා sync වෙනවා. දත්ත සැබෑ-කාලීනව (real-time) යාවත්කාලීන වෙනවා.',
   cloudhow:'සකස් කරන හැටි',needlogin:'මුලින් login වෙන්න',
-  backup:'Backup & Restore',bkTitle:'දත්ත Backup එක',bkSub:'ඔයාගේ මුළු බෝඩිමේ දත්තම එක file එකකට save කරගන්න. Phone එක format කළත්, cloud එක නැති වුණත් ආපහු ගේන්න පුළුවන්.',
+  backup:'Backup & Restore',bkTitle:'දත්ත Backup එක',bkSub:'ඔයාගේ මුළු බෝඩිමේ දත්තම එක file එකකට save කරගන්න. Phone එක format කළත්, cloud එක නැති වුණත් ආපහු ගේන්න පුළුවන්. ⚠️ ඔයාගේ පෞද්ගලික වියදම් සහ budget එකත් මේ file එකේ තියෙනවා — කාටවත් නිකම් දෙන්න එපා.',
   bkExport:'📥 Backup එකක් ගන්න (Download)',bkImport:'📤 Backup එකකින් Restore කරන්න',bkDone:'Backup එක download කළා ✓',
   bkConf:'මේ backup එකෙන් දැනට තියෙන දත්ත ඔක්කොම replace වෙනවා. දිගටම යන්නද?',bkYes:'ඔව්, Restore කරන්න',bkOk:'Restore කළා ✓',bkBad:'මේ file එක වලංගු backup එකක් නෙවෙයි',
   nohouse:'මේ නමින් බෝඩිමක් නෑ — Register කරන්න',shared:'කට්ටිය එක්ක එකම දත්ත',
@@ -1090,7 +1168,7 @@ const L={
   pickpart:'Select at least one person',addedm:'Added',nomem2:'Add members before adding expenses',
   paysettle:' marked as paid',gets:'gets back',pays:'owes',ppl:'people',
   editexp:'Edit expense',edit:'Edit',update:'Update',updated:'Updated ✓',delbtn:'Delete',
-  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',bycat:'Where it went',
+  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',sc_house:'House',sc_mine:'Mine',myspend:'My spending',myshare:'My share of house',personal:'Personal',personalone:'Personal',addp:'Personal expense',editp:'Edit personal',nopers:'No personal expenses',nopersS:'Add what you spent on yourself — nobody else sees it',personalnote:'Stays on this phone. The house never sees it and it is never split.',delpconf:'Remove this personal expense?',csv_kind:'Kind',csv_cat:'Category',bycat:'Where it went',
   totexp:'Expenses',avgper:'Avg / person',expn:'expenses',
   rep_day:'Today',rep_week:'Week',rep_month:'Month',daytrend:'Last 7 days',weektrend:'Last 6 weeks',
   noperiod:'No expenses in this period',
@@ -1101,14 +1179,14 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
   houseexists:'A house with this name already exists in cloud — please log in',updready:'A new version is ready',updnow:'Update',enablesync:'Sync this house to cloud',syncpassnote:'Enter the house password — the cloud location is derived from it.',
   syncpushed:'Synced to cloud ✅',cfgsaved:'Config saved',cloudnote:'Everyone uses the same Firebase config plus the house name & password to sync. Data updates in real-time across phones.',
   cloudhow:'How to set up',needlogin:'Please log in first',
-  backup:'Backup & Restore',bkTitle:'Backup your data',bkSub:'Save your whole house to a file. Restore it even if the phone is wiped or the cloud is lost.',
+  backup:'Backup & Restore',bkTitle:'Backup your data',bkSub:'Save your whole house to a file. Restore it even if the phone is wiped or the cloud is lost. ⚠️ Your private personal expenses and budget are in this file too — think before sharing it.',
   bkExport:'📥 Download a backup',bkImport:'📤 Restore from a backup',bkDone:'Backup downloaded ✓',
   bkConf:'Restoring replaces all current data with the backup. Continue?',bkYes:'Yes, restore',bkOk:'Restored ✓',bkBad:'That file is not a valid backup',
   nohouse:'No house with that name — please Register',shared:'Shared with your group',
@@ -1518,6 +1596,7 @@ function maybeAskWhoAmI(){
 }
 function go(v){view=v;drawView();}
 function drawView(){
+  renderSyncBar();
   ['home','bal','mem','hist'].forEach(v=>{const b=document.getElementById('n-'+v);if(b)b.classList.toggle('on',view===v);});
   renderTop();
   const c=document.getElementById('content');
@@ -1566,6 +1645,7 @@ function renderTop(){
        <div class="sub">${sub}</div>
      </div>
    </div>`;
+  updateCloudBadge();   // the button was just re-rendered; settle its state
 }
 
 /* ---------- WHO AM I ---------- */
@@ -2123,10 +2203,13 @@ function spendByCategory(exps){
     .filter(x=>x.value>0)
     .sort((a,b)=>b.value-a.value);
 }
+function scopedExpenses(){
+  return reportScope==='mine'?mineAsExpenses(reportPeriod):periodExpenses(reportPeriod);
+}
 function setCat(key){
   catPick=(catPick===key)?null:key;
   const box=document.getElementById('catDonut');
-  if(box)box.innerHTML=donutInner(spendByCategory(periodExpenses(reportPeriod)));
+  if(box)box.innerHTML=donutInner(spendByCategory(scopedExpenses()));
   else drawView();
 }
 function donutInner(slices){
@@ -2154,11 +2237,11 @@ function donutInner(slices){
   return `<div class="donutwrap">
       <svg viewBox="0 0 140 140" class="donut" role="img"
         aria-label="${esc(catLabel(sel.cat))} ${fmt(sel.value)}, ${pct}%">${arcs}</svg>
-      <div class="dmid">
-        <div class="dm-e">${sel.cat.e}</div>
-        <div class="dm-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
-        <div class="dm-v">${fmt(sel.value)}</div>
-        <div class="dm-p">${pct}%</div>
+      <div class="dn-mid">
+        <div class="dn-e">${sel.cat.e}</div>
+        <div class="dn-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
+        <div class="dn-v">${fmt(sel.value)}</div>
+        <div class="dn-p">${pct}%</div>
       </div>
     </div>
     <div class="dlegend">${slices.map(x=>`
@@ -2175,16 +2258,95 @@ function categoryChartHtml(exps){
     <div class="card" style="padding:18px 15px 14px" id="catDonut">${donutInner(slices)}</div>`;
 }
 
+
+/* ---- "Mine": my share of the house's spending, plus my own ----
+   The House figures stay exactly as they were, so the numbers housemates
+   quote at each other never shift. Mine is a private view on top. */
+let reportScope='house';            // 'house' | 'mine'
+function setReportScope(sc){reportScope=sc;catPick=null;drawView();}
+function myShareOf(exps){
+  const id=getMeId();
+  if(!id)return 0;
+  return Math.round(consumedByMember(exps,S.members)[id]||0);
+}
+/* A personal entry is shaped like an expense so the donut, the CSV and the
+   trend can treat both the same way. */
+function personalAsExpense(x){
+  return {id:'p'+x.id,desc:x.desc,amount:Math.round(x.amount||0),
+          payer:getMeId()||'',parts:[getMeId()||''],date:x.date,personal:true};
+}
+/* What "Mine" charts: one row per house expense holding only my share, plus
+   my personal entries at face value. */
+function mineAsExpenses(period){
+  const id=getMeId();
+  const out=[];
+  if(id){
+    // Same valid-member filter consumedByMember uses, so the rows here and
+    // the "my share" tile cannot disagree once someone has left the house.
+    const valid={};S.members.forEach(m=>valid[m.id]=0);
+    periodExpenses(period).forEach(e=>{
+      const mine=Math.round(shareMap(e,valid)[id]||0);
+      if(mine>0)out.push({id:e.id,desc:e.desc,amount:mine,payer:e.payer,parts:[id],date:e.date});
+    });
+  }
+  personalInPeriod(period).forEach(x=>out.push(personalAsExpense(x)));
+  return out;
+}
+function mineTrend(useWeekly){
+  const id=getMeId();
+  const buckets=useWeekly?6:7;
+  const span=useWeekly?7*86400000:86400000;
+  const start=useWeekly?startOfWeek(Date.now()):startOfDay(Date.now());
+  const out=[];
+  for(let i=buckets-1;i>=0;i--){
+    const from=start-i*span,to=from+span;
+    let sum=0;
+    if(id){
+      const valid={};S.members.forEach(m=>valid[m.id]=0);
+      S.expenses.filter(e=>e.date>=from&&e.date<to)
+        .forEach(e=>{sum+=Math.round(shareMap(e,valid)[id]||0);});
+    }
+    myPersonal().filter(x=>x.date>=from&&x.date<to).forEach(x=>{sum+=Math.round(x.amount||0);});
+    const d=new Date(from);
+    out.push({lab:d.toLocaleDateString(S.lang==='si'?'si-LK':'en-GB',
+              useWeekly?{day:'numeric',month:'short'}:{weekday:'short'}),
+              val:Math.round(sum),today:i===0});
+  }
+  return out;
+}
+function personalRow(x){
+  const d=new Date(x.date);
+  const dstr=d.toLocaleDateString(S.lang==='si'?'si-LK':'en-GB',{day:'numeric',month:'short'});
+  return `<div class="exp" onclick="openPersonal('${x.id}')">
+    <div class="eic">${emojiFor(x.desc)}</div>
+    <div class="mid"><div class="d">${esc(x.desc)}</div>
+      <div class="meta">${t('personalone')} · ${dstr}</div></div>
+    <div class="right"><div class="tot">${fmt(Math.round(x.amount||0))}</div></div>
+  </div>`;
+}
+function personalListHtml(period){
+  const rows=personalInPeriod(period);
+  let h=`<div class="sec-title" style="margin-top:20px">🧍 ${t('personal')}
+    <span class="link" onclick="openPersonal()">＋ ${t('addp')}</span></div>`;
+  h+=rows.length
+    ? `<div class="card">${rows.map(personalRow).join('')}</div>`
+    : `<div class="card"><div class="empty"><div class="em">🧍</div><div class="t">${t('nopers')}</div>
+        <div class="s">${t('nopersS')}</div></div></div>`;
+  return h;
+}
+
 /* ---- period helpers for daily/weekly/monthly reports ---- */
 function startOfDay(ts){const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime();}
 function startOfWeek(ts){const d=new Date(ts);d.setHours(0,0,0,0);const dow=(d.getDay()+6)%7;/*Mon=0*/d.setDate(d.getDate()-dow);return d.getTime();}
 function startOfMonth(ts){const d=new Date(ts);return new Date(d.getFullYear(),d.getMonth(),1).getTime();}
-function periodExpenses(period){
+function periodFrom(period){
   const now=Date.now();
-  let from;
-  if(period==='day')from=startOfDay(now);
-  else if(period==='week')from=startOfWeek(now);
-  else from=startOfMonth(now);
+  if(period==='day')return startOfDay(now);
+  if(period==='week')return startOfWeek(now);
+  return startOfMonth(now);
+}
+function periodExpenses(period){
+  const from=periodFrom(period);
   return S.expenses.filter(e=>(e.date||0)>=from);
 }
 /* daily trend: last 7 days ; weekly trend: last 6 weeks */
@@ -2223,7 +2385,7 @@ function budgetCardHtml(){
   if(!meId)return ''; // budget is personal; needs an identity
   const budget=myBudget();
   const monthExp=periodExpenses('month');
-  const spent=Math.round(consumedByMember(monthExp,S.members)[meId]||0);
+  const spent=Math.round(consumedByMember(monthExp,S.members)[meId]||0)+personalTotal('month');
   if(!budget){
     return `<div class="budget empty-b" onclick="openBudget()">
       <div class="brow"><div><div class="blbl">${t('mybudget')}</div>
@@ -2271,29 +2433,54 @@ let reportPeriod='month';   // 'day' | 'week' | 'month'
 function setReportPeriod(p){reportPeriod=p;catPick=null;drawView();}
 function viewReport(){
   if(!S.members.length)return emptyMembers();
-  const exps=periodExpenses(reportPeriod);
+  const mine=reportScope==='mine';
+  // "Mine" needs to know who is holding the phone; without that it can only
+  // show the personal entries, so fall back to House and offer to set it.
+  if(mine&&!getMeId())reportScope='house';
+  const houseExps=periodExpenses(reportPeriod);
+  const exps=reportScope==='mine'?mineAsExpenses(reportPeriod):houseExps;
   const total=exps.reduce((s,e)=>s+e.amount,0);
   const cnt=exps.length;
-  const avg=S.members.length?total/S.members.length:0;
   let h=`<div class="stg">`;
   // personal budget (private)
   h+=budgetCardHtml();
+  // whose figures: the house's, or just mine
+  h+=`<div class="smode" style="margin-bottom:9px" id="repScope">
+    <button class="${reportScope==='house'?'on':''}" onclick="setReportScope('house')">🏠 ${t('sc_house')}</button>
+    <button class="${reportScope==='mine'?'on':''}" onclick="setReportScope('mine')">🧍 ${t('sc_mine')}</button></div>`;
   // period toggle
   h+=`<div class="smode" style="margin-bottom:16px">
     <button class="${reportPeriod==='day'?'on':''}" onclick="setReportPeriod('day')">${t('rep_day')}</button>
     <button class="${reportPeriod==='week'?'on':''}" onclick="setReportPeriod('week')">${t('rep_week')}</button>
     <button class="${reportPeriod==='month'?'on':''}" onclick="setReportPeriod('month')">${t('rep_month')}</button></div>`;
-  h+=`<div class="stats">
+  if(reportScope==='mine'){
+    const share=myShareOf(houseExps);
+    const pers=personalTotal(reportPeriod);
+    h+=`<div class="stats">
+      <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('myspend')}</div></div>
+      <div class="stat"><div class="ic">🧾</div><div class="v">${cnt}</div><div class="l">${t('totexp')}</div></div>
+      <div class="stat"><div class="ic">🏠</div><div class="v">${fmt(share)}</div><div class="l">${t('myshare')}</div></div>
+      <div class="stat"><div class="ic">🧍</div><div class="v">${fmt(pers)}</div><div class="l">${t('personal')}</div></div>
+    </div>`;
+  }else{
+    const avg=S.members.length?total/S.members.length:0;
+    h+=`<div class="stats">
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">🧾</div><div class="v">${cnt}</div><div class="l">${t('totexp')}</div></div>
       <div class="stat"><div class="ic">👤</div><div class="v">${fmt(avg)}</div><div class="l">${t('avgper')}</div></div>
       <div class="stat"><div class="ic">👥</div><div class="v">${S.members.length}</div><div class="l">${t('mem')}</div></div>
     </div>`;
+  }
   // trend chart: daily for day/week, weekly for month
   const useWeekly=reportPeriod==='month';
   h+=`<div class="sec-title" style="margin-top:20px">📈 ${useWeekly?t('weektrend'):t('daytrend')}</div>`;
-  h+=`<div class="card" style="padding:12px 12px 10px">${trendHtml(useWeekly?weekTrend():dayTrend())}</div>`;
-  if(!cnt){
+  h+=`<div class="card" style="padding:12px 12px 10px">${trendHtml(
+        reportScope==='mine'?mineTrend(useWeekly):(useWeekly?weekTrend():dayTrend()))}</div>`;
+  if(reportScope==='mine'){
+    if(cnt)h+=categoryChartHtml(exps);
+    h+=personalListHtml(reportPeriod);
+    if(cnt)h+=`<button class="addbtn" style="background:var(--ink);color:#fff;margin-top:18px" onclick="exportCsv()">⬇️ ${t('csvexport')}</button>`;
+  }else if(!cnt){
     h+=`<div class="card" style="margin-top:18px"><div class="empty"><div class="em">📊</div><div class="t">${t('noperiod')}</div></div></div>`;
   }else{
     h+=categoryChartHtml(exps);
@@ -2303,7 +2490,7 @@ function viewReport(){
     if(reportPeriod==='month')
       h+=`<button class="addbtn" style="background:var(--gold-sf);color:#946400;margin-top:10px" onclick="closeMonth()">📅 ${t('closemonth')}</button>`;
   }
-  if(S.archives.length){
+  if(S.archives.length&&reportScope==='house'){
     h+=`<div class="sec-title" style="margin-top:24px">${t('pastmonths')}</div><div class="card">`;
     S.archives.forEach(a=>{
       const dt=new Date(a.closedAt).toLocaleDateString(S.lang==='si'?'si-LK':'en-GB',{day:'numeric',month:'short',year:'numeric'});
@@ -2532,7 +2719,8 @@ function openCloud(){
   const st=cloudState();
   const stColor=st==='synced'?'var(--green)':st==='offline'||st==='error'?'var(--red)':'var(--muted)';
   const stIcon={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
-  let sub=cloud.on?cloudStateLabel(st):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  let sub=cloud.on?cloudStateLabel(st):(syncPaused()?t('syncpaused')
+        :(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group'));
   if(cloud.on&&cloud.pending>0&&st!=='synced')sub+=` · ${cloud.pending} ${t('waiting')}`;
   let body=`<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px">
      <div style="font-size:26px">${stIcon}</div>
@@ -2611,22 +2799,54 @@ function confirmSyncPass(){
   S.cpath=housePath(S.house,v);save();
   syncTo(S.cpath);
 }
+/* Is the house sitting on the old path ours? We hold only a hash, but a
+   pre-migration node still carries the plaintext, so it can be checked
+   against our own hash without asking the user to type it again. */
+function legacyIsOurs(data){
+  const rec=cloudPassRec(data);
+  if(!rec)return false;
+  if(rec.pass!==undefined&&rec.pass!==null)return verifyPass(S,rec.pass);
+  if(rec.passHash&&S.passHash)return rec.passHash===S.passHash&&rec.passSalt===S.passSalt;
+  return false;
+}
+function finishSync(data,quiet){
+  cloud.on=true;
+  if(data){
+    mergeCloudInto(data);
+    if(!isNewFormat(data))migrateCloudFormat();
+  }else{
+    cloud.mirror=emptyMirror();
+    claimName(S.house);
+  }
+  save();cloudListen();
+  if(!quiet){toast(t('syncpushed'));closeSheet();}
+  if(S._auth&&document.querySelector('.nav')){renderTop();drawView();}
+}
+/* Attach to a house, wherever it currently lives.
+
+   The private path is the answer whenever it holds something. When it does
+   not, the house may still be on the old houses/<name> path with the rest of
+   the group working in it, so that is checked before anything is written.
+   Skipping the check meant a phone coming off the update found its private
+   path empty, uploaded its own copy, and quietly split the house in two:
+   this device in one, everyone else in the other. */
+function connectHouse(path,quiet){
+  cloud.ref=cloud.db.ref(path);
+  return onceTimed(cloud.ref).then(snap=>{
+    const data=snap.val();
+    if(data){finishSync(data,quiet);return;}
+    const oldRef=cloud.db.ref(legacyPath(S.house));
+    return onceTimed(oldRef).then(os=>{
+      const od=os.val();
+      if(!od||od.moved||!legacyIsOurs(od)){finishSync(null,quiet);return;}
+      return moveHouseToPrivatePath(oldRef,cloud.ref,od,S.house).then(()=>finishSync(od,quiet));
+    });
+  });
+}
 function syncTo(path){
   ensureFirebase(ok=>{
     if(!ok){toast(t('cloudoffline'));openCloud();return;}
-    cloud.ref=cloud.db.ref(path);
-    onceTimed(cloud.ref).then(snap=>{
-      cloud.on=true;
-      const data=snap.val();
-      if(data){
-        applyCloud(readCloudSnapshot(data),false);   // adopt remote (merged, same house)
-        if(!isNewFormat(data))migrateCloudFormat();
-      }else{
-        cloud.mirror=emptyMirror();
-        claimName(S.house);
-      }
-      save();cloudListen();toast(t('syncpushed'));closeSheet();renderTop();drawView();
-    }).catch(()=>{cloud.on=false;toast(t('cloudoffline'));openCloud();});
+    connectHouse(path,false).catch(()=>{cloud.on=false;toast(t('cloudoffline'));openCloud();});
   });
 }
 function removeCloudCfg(){
@@ -2647,7 +2867,10 @@ function openBackup(){
 function exportBackup(){
   const data={_bodime:1,_ver:4,exportedAt:Date.now(),
     house:S.house,passHash:S.passHash,passSalt:S.passSalt,lang:S.lang,members:S.members,expenses:S.expenses,
-    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[],recurring:S.recurring||[]};
+    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[],recurring:S.recurring||[],
+    // Private to this device and not in S, so without this a reinstall would
+    // lose them. It also means the file carries them — see bkSub.
+    personal:myPersonal(),budget:myBudget()};
   const safe=(S.house||'bodime').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30)||'bodime';
   downloadFile(`bodime_${safe}_${csvDate(Date.now())}.json`,
                JSON.stringify(data,null,2),'application/json');
@@ -2669,6 +2892,8 @@ function importBackup(input){
       S.members=d.members||[];S.expenses=d.expenses||[];
       S.settles=d.settles||[];S.archives=d.archives||[];S.activity=d.activity||[];S.debts=d.debts||[];
       S.recurring=d.recurring||[];
+      if(Array.isArray(d.personal))setMyPersonal(d.personal);
+      if(d.budget)setMyBudget(d.budget);
       S._auth=true;delete S._rupees;migrateWholeRupees(S);
       const cur=getMeId();if(cur&&!S.members.some(m=>m.id===cur))setMeId(null);
       save();toast(t('bkOk'));closeSheet();view='home';render();reconnectCloud();
@@ -2841,15 +3066,78 @@ function downloadFile(name,text,mime){
   document.body.appendChild(a);a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
 }
+/* The Mine sheet has no per-housemate columns to fill, so it is a flat list
+   saying what each row was and whether it came out of the house or my own
+   pocket. */
+function buildMineCsv(period){
+  const rows=[[t('csv_date'),t('csv_desc'),t('csv_amount'),t('csv_kind'),t('csv_cat')]];
+  let total=0;
+  mineAsExpenses(period).slice().sort((a,b)=>(a.date||0)-(b.date||0)).forEach(e=>{
+    total+=Math.round(e.amount);
+    rows.push([csvDate(e.date),e.desc||'',Math.round(e.amount),
+               e.personal?t('personalone'):t('myshare'),catLabel(categoryOf(e.desc))]);
+  });
+  rows.push([t('csv_total'),'',total,'','']);
+  return csvRows(rows);
+}
 function exportCsv(){
-  const exps=periodExpenses(reportPeriod);
+  const mine=reportScope==='mine';
+  const exps=mine?mineAsExpenses(reportPeriod):periodExpenses(reportPeriod);
   if(!exps.length){toast(t('nothing2close'));return;}
   const safe=(S.house||'bodime').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30)||'bodime';
+  const who=mine?((me()&&me().name)||'mine').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,20)||'mine':reportPeriod;
   // The BOM is what makes Excel read this as UTF-8, and Sinhala descriptions
   // arrive as Sinhala rather than mojibake.
-  downloadFile(`bodime_${safe}_${reportPeriod}_${csvDate(Date.now())}.csv`,
-               '\ufeff'+buildCsv(exps),'text/csv;charset=utf-8');
+  downloadFile(`bodime_${safe}_${mine?who+'_':''}${reportPeriod}_${csvDate(Date.now())}.csv`,
+               '\ufeff'+(mine?buildMineCsv(reportPeriod):buildCsv(exps)),'text/csv;charset=utf-8');
   toast(t('csvdone'));
+}
+
+
+/* ---------- PERSONAL EXPENSE SHEET ----------
+   Deliberately smaller than the house expense sheet: no payer, no split, no
+   participants. It is yours, so there is nothing to divide. */
+let pDraft={editId:null,date:Date.now()};
+function openPersonal(editId){
+  const x=editId?personalById(editId):null;
+  pDraft={editId:x?x.id:null,date:x?x.date:Date.now()};
+  const body=`
+   <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:-4px 0 14px">🔒 ${t('personalnote')}</p>
+   <div class="f"><label>${t('desc')}</label>
+     <input class="in" id="p_desc" placeholder="${t('descph')}" autocomplete="off" value="${x?esc(x.desc):''}"></div>
+   <div class="f"><label>${t('amt')}</label>
+     <div class="amtwrap"><span class="cur">Rs.</span>
+       <input class="in" id="p_amt" inputmode="text" placeholder="0" autocomplete="off" value="${x?Math.round(x.amount):''}"></div></div>
+   <div class="f"><label>${t('expdate')}</label>
+     <div class="daterow"><input class="in" type="date" id="p_date" value="${ymd(pDraft.date)}" max="${ymd(Date.now())}"></div></div>
+   <button class="addbtn coral" onclick="savePersonal()">${x?t('update'):t('save')}</button>
+   ${x?`<button class="addbtn" style="background:var(--red-sf);color:var(--red);margin-top:10px" onclick="delPersonal('${x.id}')">🗑 ${t('delbtn')}</button>`:''}`;
+  sheet(x?t('editp'):t('addp'),body);
+  if(!x)setTimeout(()=>{const f=document.getElementById('p_desc');if(f)f.focus();},320);
+}
+function savePersonal(){
+  const desc=document.getElementById('p_desc').value.trim();
+  const amt=evalAmt(document.getElementById('p_amt').value);
+  const dstr=document.getElementById('p_date').value;
+  if(!desc){toast(t('pickdesc'));return;}
+  if(isNaN(amt)||amt<=0){toast(t('pickamt'));return;}
+  const date=fromYmd(dstr)||pDraft.date||Date.now();
+  const list=myPersonal();
+  if(pDraft.editId){
+    const cur=list.find(x=>x.id===pDraft.editId);
+    if(cur){cur.desc=desc;cur.amount=Math.round(amt);cur.date=date;}
+  }else{
+    list.push({id:uid(),desc,amount:Math.round(amt),date});
+  }
+  setMyPersonal(list);
+  closeSheet();toast(pDraft.editId?t('updated'):t('saved'));
+  reportScope='mine';view='report';drawView();
+}
+function delPersonal(id){
+  askConfirm(t('delpconf'),()=>{
+    setMyPersonal(myPersonal().filter(x=>x.id!==id));
+    closeSheet();toast(t('deleted'));drawView();
+  },{emoji:'🗑',yes:tA('yesdel')});
 }
 
 /* ---------- ADD / EDIT EXPENSE SHEET ---------- */
@@ -3125,6 +3413,7 @@ function hideSplash(){
 if(S&&S._auth)catchUpRecurring(true);
 render();
 reconnectCloud();
+renderSyncBar();
 setTimeout(hideSplash,900);
 window.addEventListener('load',()=>setTimeout(hideSplash,700));
 

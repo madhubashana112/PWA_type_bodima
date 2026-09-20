@@ -52,10 +52,10 @@ const h = require('./helpers/harness');
   s.check('one arc per category present', (await arcs()) === sums.count, [await arcs(), sums.count]);
   s.check('a legend entry per arc',
           (await page.$$eval('#catDonut .dlg', e => e.length)) === sums.count);
-  s.check('the centre leads with the largest', (await page.textContent('#catDonut .dm-v')).includes('15,000')
-          || (await page.textContent('#catDonut .dm-n')).length > 0, await page.textContent('#catDonut .dm-n'));
+  s.check('the centre leads with the largest', (await page.textContent('#catDonut .dn-v')).includes('15,000')
+          || (await page.textContent('#catDonut .dn-n')).length > 0, await page.textContent('#catDonut .dn-n'));
   // Bills and rent is 19,500 of 26,100 here
-  s.check('the centre shows a share', /%$/.test((await page.textContent('#catDonut .dm-p')).trim()));
+  s.check('the centre shows a share', /%$/.test((await page.textContent('#catDonut .dn-p')).trim()));
 
   s.section('4. arcs together close the ring');
   const geom = await page.evaluate(() => {
@@ -73,17 +73,17 @@ const h = require('./helpers/harness');
   s.check('arcs are laid end to end', geom.monotonic);
 
   s.section('5. tapping a slice moves the centre');
-  const before = await page.textContent('#catDonut .dm-v');
+  const before = await page.textContent('#catDonut .dn-v');
   await page.click('#catDonut .dlg:nth-child(3)');
   await page.waitForTimeout(300);
-  const after = await page.textContent('#catDonut .dm-v');
+  const after = await page.textContent('#catDonut .dn-v');
   s.check('the centre changed', before !== after, [before, after]);
   s.check('the tapped legend entry is marked',
           (await page.$$eval('#catDonut .dlg.on', e => e.length)) === 1);
   await page.click('#catDonut .dlg:nth-child(3)');
   await page.waitForTimeout(300);
   s.check('tapping it again goes back to the largest',
-          (await page.textContent('#catDonut .dm-v')) === before);
+          (await page.textContent('#catDonut .dn-v')) === before);
 
   s.section('6. switching period does not strand the selection');
   await page.click('#catDonut .dlg:nth-child(2)');
