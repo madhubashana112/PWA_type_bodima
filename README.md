@@ -92,6 +92,22 @@ Houses created by an older build, which stored the password in the clear at
 through: the data is copied to the private path first, and only once that copy
 has landed is the old node replaced with a tombstone.
 
+### Restoring a database that is refusing everything
+
+If every device shows *"Database refused access — check the rules"*, the
+database is denying reads — most often because Firebase's test-mode rules
+expired, which happens 30 days after they are set and takes the whole house
+offline at once. Retrying cannot help; only the rules can.
+
+Fastest way back, in two steps:
+
+1. **Restore service.** In the Rules tab, publish
+   `{"rules": {".read": true, ".write": true}}`. Everyone syncs again
+   immediately. The database is wide open in the meantime, so treat this as
+   temporary.
+2. **Harden it** with `database.rules.json` once every phone has opened the
+   new build and moved across, per the ordering below.
+
 ### Applying the rules is the last step, not the first
 
 The rules make `houses/<name>` accept nothing but a tombstone. A phone still
