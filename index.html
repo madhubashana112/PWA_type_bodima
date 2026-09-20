@@ -118,6 +118,7 @@ input,select,textarea{outline:none}
 .topbar .tools{display:flex;gap:8px}
 .icbtn{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#fff;transition:.2s;font-size:15px}
 .icbtn:active{transform:scale(.92);background:rgba(255,255,255,.2)}
+.icbtn.warn{background:rgba(224,70,58,.28)}
 .standing{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:13px 16px}
 .standing .lbl{font-size:11.5px;color:#b9b2cc;letter-spacing:1.2px;text-transform:uppercase;font-weight:700}
 .standing .amt{font-family:'Bricolage Grotesque';font-size:27px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
@@ -704,7 +705,10 @@ const BUILTIN_FB_CFG = {
 const HAS_BUILTIN = !!(BUILTIN_FB_CFG && BUILTIN_FB_CFG.apiKey);
 
 const FBCFG_KEY='bodime_fb_cfg';
-let cloud={cfg:loadCfg(),on:false,db:null,ref:null,status:'off',applying:false,builtin:HAS_BUILTIN,mirror:null};
+let cloud={cfg:loadCfg(),on:false,db:null,ref:null,status:'off',applying:false,builtin:HAS_BUILTIN,mirror:null,
+  online:null,      // null = not known yet, from Firebase's own .info/connected
+  pending:0,        // writes handed to Firebase but not yet acknowledged
+  infoRef:null};
 function loadCfg(){
   if(HAS_BUILTIN)return BUILTIN_FB_CFG;
   try{return JSON.parse(localStorage.getItem(FBCFG_KEY)||'null');}catch(e){return null;}
@@ -791,8 +795,13 @@ function cloudFlush(){
   });
   cloud.mirror=cur;
   const keys=Object.keys(updates);if(!keys.length)return;
-  cloud.ref.update(updates).then(()=>{cloud.status='synced';updateCloudBadge();})
-    .catch(()=>{cloud.status='offline';updateCloudBadge();});
+  /* Firebase queues writes made while offline and resolves them on reconnect,
+     so a pending promise means "not saved yet", not "failed". Count them and
+     let .info/connected say whether we are actually reaching the server. */
+  cloud.pending++;updateCloudBadge();
+  cloud.ref.update(updates)
+    .then(()=>{cloud.pending=Math.max(0,cloud.pending-1);updateCloudBadge();})
+    .catch(()=>{cloud.pending=Math.max(0,cloud.pending-1);cloud.status='error';updateCloudBadge();});
 }
 /* one-time: rewrite an OLD flat-blob house into the new child structure */
 function migrateCloudFormat(){
@@ -837,8 +846,24 @@ function ensureFirebase(cb){
     }catch(e){cloud.status='error';updateCloudBadge();cb(false);}
   });
 }
+/* Firebase reports its own socket state here. Without it the badge only knew
+   what our last write did, so a phone that had silently dropped off wifi kept
+   showing a green tick. */
+function watchConnection(){
+  if(!cloud.db||cloud.infoRef)return;
+  try{
+    cloud.infoRef=cloud.db.ref('.info/connected');
+    cloud.infoRef.on('value',s=>{
+      const was=cloud.online;
+      cloud.online=!!s.val();
+      updateCloudBadge();
+      if(cloud.online&&was===false){cloudFlush();toast(t('cloudback'));}
+    });
+  }catch(e){}
+}
 function cloudListen(){
   if(!cloud.ref)return;
+  watchConnection();
   cloud.ref.on('value',snap=>{
     if(cloud.applying)return;              // ignore the echo of our own writes
     const data=snap.val();
@@ -889,10 +914,26 @@ function reconnectCloud(){ // on boot, if already logged in with cloud config
     cloud.ref=cloud.db.ref(S.cpath);cloud.on=true;cloudListen();
   });
 }
+/* What the app should say about syncing right now, worked out from the real
+   socket state and the writes still in flight rather than from whatever the
+   last operation happened to set. */
+function cloudState(){
+  if(!cloud.on)return cloud.status==='connecting'?'connecting':'off';
+  if(cloud.status==='error')return 'error';
+  if(cloud.online===false)return 'offline';
+  if(cloud.online===null)return 'connecting';
+  return cloud.pending>0?'syncing':'synced';
+}
+function cloudStateLabel(st){
+  return {off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),
+          syncing:t('cloudsyncing'),offline:t('cloudoffline'),error:t('clouderr')}[st]||'';
+}
 function updateCloudBadge(){
   const b=document.getElementById('cloudBtn');if(!b)return;
-  const map={off:'☁️',connecting:'🔄',synced:'✅',offline:'⚠️',error:'⚠️'};
-  b.textContent=cloud.on?(map[cloud.status]||'☁️'):'☁️';
+  const st=cloudState();
+  b.textContent={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
+  b.title=t('cloud')+' — '+cloudStateLabel(st);
+  b.classList.toggle('warn',st==='offline'||st==='error');
 }
 
 /* ================= I18N ================= */
@@ -930,7 +971,7 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
@@ -1004,7 +1045,7 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
@@ -1379,7 +1420,12 @@ function doLogin(){
     });
   }else localLogin(h,v);
 }
-function logout(){S._auth=false;authMode='login';if(cloud.ref){cloud.ref.off();cloud.ref=null;}cloud.on=false;render();}
+function detachCloud(){
+  if(cloud.ref){cloud.ref.off();cloud.ref=null;}
+  if(cloud.infoRef){cloud.infoRef.off();cloud.infoRef=null;}
+  cloud.on=false;cloud.online=null;cloud.pending=0;cloud.mirror=null;
+}
+function logout(){S._auth=false;authMode='login';detachCloud();render();}
 
 /* ---------- MAIN APP SHELL ---------- */
 function renderApp(app){
@@ -2252,10 +2298,11 @@ function delDebt(debtId){
 /* ---------- CLOUD SYNC SHEET ---------- */
 function openCloud(){
   const lng=S.lang;
-  const stMap={off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),offline:t('cloudoffline'),error:t('clouderr')};
-  const stColor=cloud.on&&cloud.status==='synced'?'var(--green)':cloud.status==='offline'||cloud.status==='error'?'var(--red)':'var(--muted)';
-  const stIcon=cloud.on?(cloud.status==='synced'?'✅':cloud.status==='connecting'?'🔄':'⚠️'):'☁️';
-  const sub=cloud.on?(stMap[cloud.status]||''):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  const st=cloudState();
+  const stColor=st==='synced'?'var(--green)':st==='offline'||st==='error'?'var(--red)':'var(--muted)';
+  const stIcon={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
+  let sub=cloud.on?cloudStateLabel(st):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  if(cloud.on&&cloud.pending>0&&st!=='synced')sub+=` · ${cloud.pending} ${t('waiting')}`;
   let body=`<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px">
      <div style="font-size:26px">${stIcon}</div>
      <div><div style="font-weight:800;font-size:15px">${cloud.on?t('cloudon'):t('cloudoff')}</div>
@@ -2351,8 +2398,7 @@ function syncTo(path){
 }
 function removeCloudCfg(){
   askConfirm(t('removecfg')+'?',()=>{
-    if(cloud.ref){cloud.ref.off();cloud.ref=null;}
-    cloud.on=false;clearCfg();save&&save();toast(t('deleted'));closeSheet();renderTop();
+    detachCloud();clearCfg();save&&save();toast(t('deleted'));closeSheet();renderTop();
   },{emoji:'☁️',yes:tA('yesdel')});
 }
 
