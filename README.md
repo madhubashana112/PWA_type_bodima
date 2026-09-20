@@ -19,7 +19,10 @@ is no build step, no bundler and no server to run.
   and due dates, shared with the rest of the house.
 - **Reports** by day, week or month, with a where-it-went donut, a per-person
   spend chart, a trend, a private personal budget, and CSV export for a
-  spreadsheet.
+  spreadsheet. A House / Mine switch shows either the whole house's figures
+  or just your own.
+- **Personal expenses** — what you spent on yourself, kept on your phone and
+  never synced to the house, counted in your own report and budget.
 - **Month close** that files everything into an archive and starts fresh.
 - **Search and filters** over the history by text, person and period.
 - **Offline** — the app opens and works with no connection; changes sync when
