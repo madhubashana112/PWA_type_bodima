@@ -827,11 +827,12 @@ function loadFirebase(cb){
 }
 /* Firebase .once() never settles while offline — it waits for a socket. Race
    it against a timeout so login/register fall back to local mode fast. */
-function onceTimed(ref,ms){
-  return Promise.race([
-    ref.once('value'),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms||6000))
-  ]);
+function onceTimed(ref,ms){return withTimeout(ref.once('value'),ms);}
+/* A write made with no connection is queued by Firebase and stays pending
+   until it reconnects, which is right for a background save but not for a
+   step login is waiting on. */
+function withTimeout(p,ms){
+  return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms||6000))]);
 }
 function ensureFirebase(cb){
   if(!cloud.cfg){cb(false);return;}
@@ -1354,10 +1355,12 @@ function claimName(house){
    The old node is only cleared once the copy has actually landed, so a failed
    or half-finished move never loses data. */
 function moveHouseToPrivatePath(oldRef,newRef,data,house){
-  return newRef.set(data)
-    .then(()=>oldRef.set({moved:1,at:Date.now()}))
-    .then(()=>claimName(house))
-    .catch(()=>{});
+  return withTimeout(newRef.set(data),10000).then(()=>{
+    // The copy landed, so clearing the old node is safe. Those two writes are
+    // allowed to finish in the background; the login no longer depends on them.
+    oldRef.set({moved:1,at:Date.now()}).catch(()=>{});
+    claimName(house);
+  });
 }
 function adoptCloudHouse(ref,path,data,v){
   const out=readCloudSnapshot(data);
@@ -1401,6 +1404,10 @@ function doLogin(){
             if(!verifyPass(cloudPassRec(od),v)){authBusy(false);authError(tA('wrong'));return;}
             return moveHouseToPrivatePath(oldRef,ref,od,h).then(()=>{
               authBusy(false);adoptCloudHouse(ref,path,od,v);
+            },()=>{
+              // Could not copy the house across; leave the original alone and
+              // let them try again with a connection.
+              authBusy(false);authError(tA('cloudoffline'));
             });
           }
           // No house at either path. A name marker (or a "moved" tombstone)
