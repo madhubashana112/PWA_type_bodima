@@ -246,6 +246,59 @@ async function strandedPhone(b, s, store) {
     await ctx.close();
   }
 
+  s.section('9. a refused read is reported as such, and not retried forever');
+  {
+    const { ctx, page } = await upgradedPhone(b, s, legacyLocal(), legacyCloud());
+    await page.evaluate(() => {
+      detachCloud(); syncTried = true;
+      // What Firebase sends when the rules say no.
+      const err = new Error('permission_denied at /h/abc: Client does not have permission');
+      noteCloudError(err);
+      drawView();
+    });
+    await page.waitForTimeout(250);
+    s.check('recognised as a refusal, not a dead network', await page.evaluate(() => cloud.denied === true));
+    const text = await page.textContent('#syncbar');
+    s.check('the bar says the database refused', text.toLowerCase().includes('refused'), text);
+    s.check('no endless retry is scheduled', await page.evaluate(() => {
+      clearReconnect(); cloud.denied = true; scheduleReconnect(); return reconnectTimer === null; }));
+    s.check('a timeout is still retried', await page.evaluate(() => {
+      clearReconnect(); noteCloudError(new Error('timeout'));
+      const was = cloud.denied; scheduleReconnect();
+      const scheduled = reconnectTimer !== null; clearReconnect();
+      return was === false && scheduled; }));
+    s.check('the cloud sheet names the reason', await page.evaluate(() => {
+      noteCloudError(new Error('permission_denied')); openCloud();
+      const t = document.getElementById('sheet').textContent.toLowerCase();
+      closeSheet(); return t.includes('refused'); }));
+    await ctx.close();
+  }
+
+  s.section('10. the warning bar stays inside the app column on a wide window');
+  {
+    const ctx = await h.context(b, { viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => s.countFailure('uncaught page error: ' + e.message));
+    await page.goto(h.BASE + '/index.html', { waitUntil: 'load' });
+    await page.evaluate(d => localStorage.setItem('bodime_data_v2', d), legacyLocal());
+    await page.reload({ waitUntil: 'load' });
+    await h.install(page, legacyCloud());
+    await page.evaluate(() => { detachCloud(); syncTried = true; drawView(); });
+    await page.waitForTimeout(350);
+    const box = await page.evaluate(() => {
+      const bar = document.getElementById('syncbar'), app = document.getElementById('app');
+      if (!bar || !bar.classList.contains('show')) return null;
+      const b = bar.getBoundingClientRect(), a = app.getBoundingClientRect();
+      return { barW: Math.round(b.width), appW: Math.round(a.width),
+               insideLeft: b.left >= a.left - 1, insideRight: b.right <= a.right + 1 };
+    });
+    s.check('the bar is showing', !!box, box);
+    // It lives outside #app, so without pinning it spanned the whole window.
+    s.check('it is not wider than the app column', box && box.barW <= box.appW, box);
+    s.check('and sits within it', box && box.insideLeft && box.insideRight, box);
+    await ctx.close();
+  }
+
   await b.close();
   s.finish();
 })();

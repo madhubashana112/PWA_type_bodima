@@ -266,7 +266,13 @@ textarea.in{resize:none;min-height:46px}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* "a new version is ready" bar */
-#updbar,#syncbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
+/* #app is the 480px column; these live outside it, so without pinning they
+   stretch the full width of a desktop window. */
+/* Centred with a margin, not a transform: these carry `animation:rise`,
+   whose keyframes set transform and would override it. */
+#updbar,#syncbar{position:fixed;left:50%;width:calc(min(480px,100%) - 24px);
+  margin-left:calc((min(480px,100%) - 24px) / -2);
+  bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
   background:var(--ink);color:#fff;border-radius:16px;padding:12px 13px 12px 16px;box-shadow:var(--shadow);
   animation:rise .35s both}
 #updbar.show,#syncbar.show{display:flex}
@@ -274,6 +280,8 @@ textarea.in{resize:none;min-height:46px}
 #updbar .ub,#syncbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
 #updbar .ux{color:#9a93ad;font-size:19px;padding:0 4px;line-height:1}
 #updbar.show ~ #syncbar.show{bottom:152px}   /* stack, never overlap */
+#syncbar .us{font-size:11.5px;font-weight:600;color:#e6b8ac;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #syncbar{background:#5b2416}
 
 /* custom confirm */
@@ -792,6 +800,8 @@ const HAS_BUILTIN = !!(BUILTIN_FB_CFG && BUILTIN_FB_CFG.apiKey);
 
 const FBCFG_KEY='bodime_fb_cfg';
 let cloud={cfg:loadCfg(),on:false,db:null,ref:null,status:'off',applying:false,builtin:HAS_BUILTIN,mirror:null,
+  lastError:'',       // why the last attempt failed, for the bar and the sheet
+  denied:false,       // the database refused us; retrying will not help
   online:null,      // null = not known yet, from Firebase's own .info/connected
   pending:0,        // writes handed to Firebase but not yet acknowledged
   infoRef:null};
@@ -955,6 +965,21 @@ function onceTimed(ref,ms){return withTimeout(ref.once('value'),ms);}
 function withTimeout(p,ms){
   return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms||6000))]);
 }
+/* Every failure path used to discard its error, so "not syncing" could not
+   tell a dead network from the database refusing the read — and those need
+   opposite responses. A denial is permanent: retrying it forever is wrong,
+   and the rules have to be fixed instead. */
+function noteCloudError(e){
+  const msg=(e&&(e.message||e.code||e))+'';
+  cloud.lastError=msg;
+  cloud.denied=/permission|denied/i.test(msg);
+  return msg;
+}
+function cloudErrorText(){
+  if(cloud.denied)return t('syncdenied');
+  if(!cloud.lastError)return '';
+  return /timeout/i.test(cloud.lastError)?t('synctimeout'):cloud.lastError.slice(0,120);
+}
 function ensureFirebase(cb){
   if(!cloud.cfg){cb(false);return;}
   cloud.status='connecting';updateCloudBadge();
@@ -999,7 +1024,7 @@ function cloudListen(){
     applyCloud(out,true);
     if(!isNewFormat(data))migrateCloudFormat();   // upgrade an old flat house, once
     if(S._auth&&document.querySelector('.nav')){renderTop();const c=document.getElementById('content');if(c)drawView();}
-  },()=>{cloud.status='offline';updateCloudBadge();});
+  },e=>{noteCloudError(e);cloud.status=cloud.denied?'error':'offline';updateCloudBadge();});
   cloud.status='synced';updateCloudBadge();
 }
 /* ---- notifications for other people's actions ---- */
@@ -1041,7 +1066,7 @@ function clearReconnect(){if(reconnectTimer){clearTimeout(reconnectTimer);reconn
    user has to supply the password, which is the bar's other button. */
 function canRetrySync(){return !!(S&&S._auth&&cloud.cfg&&S.cpath&&!cloud.on);}
 function scheduleReconnect(){
-  if(reconnectTimer||!canRetrySync())return;
+  if(reconnectTimer||!canRetrySync()||cloud.denied)return;
   const wait=Math.min(60000,5000*Math.pow(2,Math.min(reconnectTries,4)));
   reconnectTimer=setTimeout(()=>{reconnectTimer=null;reconnectTries++;tryReconnect();},wait);
 }
@@ -1053,8 +1078,9 @@ function tryReconnect(manual){
     syncTried=true;
     if(!ok){cloud.on=false;updateCloudBadge();scheduleReconnect();return;}
     connectHouse(S.cpath,true).then(
-      ()=>{clearReconnect();updateCloudBadge();},
-      ()=>{cloud.on=false;updateCloudBadge();scheduleReconnect();});
+      ()=>{cloud.lastError='';cloud.denied=false;clearReconnect();updateCloudBadge();},
+      e=>{noteCloudError(e);cloud.on=false;updateCloudBadge();
+          if(!cloud.denied)scheduleReconnect();});
   });
 }
 function reconnectCloud(){ // on boot, if already logged in with cloud config
@@ -1086,7 +1112,9 @@ function renderSyncBar(){
   // Wait for one attempt to settle before crying wolf during a normal boot.
   if(!(syncPaused()||(notSyncing()&&syncTried))){bar.classList.remove('show');bar.innerHTML='';return;}
   const needsPass=syncPaused();
-  bar.innerHTML=`<div class="ut">⚠️ ${esc(t('syncpaused'))}</div>
+  const why=needsPass?'':cloudErrorText();
+  bar.innerHTML=`<div class="ut">⚠️ ${esc(cloud.denied?t('syncdenied'):t('syncpaused'))}${
+      why&&!cloud.denied?`<div class="us">${esc(why)}</div>`:''}</div>
     <button class="ub" onclick="${needsPass?'askSyncPass()':'tryReconnect(true)'}">${
       esc(needsPass?t('reconnect'):t('retry'))}</button>`;
   bar.classList.add('show');
@@ -1135,7 +1163,7 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',retry:'ආයෙත් try කරන්න',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',retry:'ආයෙත් try කරන්න',syncdenied:'Database එක access කරන්න දෙන්නේ නෑ — rules බලන්න',synctimeout:'Connection එක හම්බුනේ නෑ',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
@@ -1209,7 +1237,7 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',retry:'Retry',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',retry:'Retry',syncdenied:'Database refused access — check the rules',synctimeout:'Could not reach the database',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
@@ -2752,6 +2780,7 @@ function openCloud(){
   let sub=cloud.on?cloudStateLabel(st):(syncPaused()?t('syncpaused')
         :(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group'));
   if(cloud.on&&cloud.pending>0&&st!=='synced')sub+=` · ${cloud.pending} ${t('waiting')}`;
+  if(!cloud.on&&cloudErrorText())sub+=` · ${cloudErrorText()}`;
   let body=`<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px">
      <div style="font-size:26px">${stIcon}</div>
      <div><div style="font-weight:800;font-size:15px">${cloud.on?t('cloudon'):t('cloudoff')}</div>
