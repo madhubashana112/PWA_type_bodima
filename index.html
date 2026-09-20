@@ -2457,15 +2457,17 @@ function openCloud(){
 function cloudHowto(lng){
   const steps = lng==='si' ? [
     'console.firebase.google.com එකේ project එකක් හදන්න',
-    'Realtime Database එකක් හදලා, Rules වල read/write true කරන්න (test mode)',
+    'Realtime Database එකක් හදන්න',
     'Project Settings → Your apps → Web app එකක් හදලා firebaseConfig එක copy කරන්න',
-    'bodime.html file එක Notepad එකකින් open කරලා, උඩම තියෙන BUILTIN_FB_CFG එකට ඒ config එක දාන්න',
+    'index.html file එක Notepad එකකින් open කරලා, උඩම තියෙන BUILTIN_FB_CFG එකට ඒ config එක දාන්න',
+    'database.rules.json එකේ තියෙන rules ටික Firebase Rules tab එකට paste කරන්න',
     'ඊට පස්සේ ඒ file එකම කට්ටියට යවන්න — කිසිම setup එකක් නැතුව බෝඩිමේ නම/password එකෙන් හැමෝටම login වෙන්න පුළුවන්'
   ] : [
     'Create a project at console.firebase.google.com',
-    'Create a Realtime Database; set Rules read/write to true (test mode)',
+    'Create a Realtime Database',
     'Project Settings → Your apps → add a Web app, copy firebaseConfig',
-    'Open bodime.html in a text editor and paste it into BUILTIN_FB_CFG at the top',
+    'Open index.html in a text editor and paste it into BUILTIN_FB_CFG at the top',
+    'Paste the rules from database.rules.json into the Rules tab',
     'Send that same file to your housemates — they just log in with the house name & password'
   ];
   return `<div style="margin-top:18px;background:var(--gold-sf);border-radius:14px;padding:14px 16px">
