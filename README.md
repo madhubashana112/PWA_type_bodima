@@ -57,7 +57,8 @@ into `index.html`; to use your own:
 3. Project Settings → Your apps → add a **Web app**, and copy `firebaseConfig`.
 4. Paste it over `BUILTIN_FB_CFG` near the top of the script in `index.html`.
 5. Apply the rules in [`database.rules.json`](database.rules.json) — paste them
-   into the Rules tab, or `firebase deploy --only database`.
+   into the Rules tab, or run `npm run deploy:rules` (needs the Firebase CLI
+   and `firebase login`; `.firebaserc` already names the project).
 
 Everyone you then send the file to shares that database; they only ever type
 the house name and password.
@@ -89,8 +90,22 @@ rules and the app.
 Houses created by an older build, which stored the password in the clear at
 `houses/<name>`, still log in with that password and are migrated on the way
 through: the data is copied to the private path first, and only once that copy
-has landed is the old node replaced with a tombstone. Apply the new rules only
-after every device has opened the updated app at least once.
+has landed is the old node replaced with a tombstone.
+
+### Applying the rules is the last step, not the first
+
+The rules make `houses/<name>` accept nothing but a tombstone. A phone still
+running an older build writes its expenses there, so applying the rules before
+every phone has moved across will stop those phones saving anything.
+
+In order:
+
+1. Ship the new build and let every phone open it once.
+2. Any phone showing *"Not syncing"* — tap **Connect** and enter the house
+   password.
+3. Check the database: the house should be under `h/<hash>`, and
+   `houses/<name>` should read `{"moved": 1}`.
+4. Only then apply the rules.
 
 ## Updates
 
