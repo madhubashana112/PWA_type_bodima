@@ -221,3 +221,19 @@ Each runs once and is idempotent.
 | `migrateLocalDebts` | folds once-private debts into the shared list |
 | `migrateCloudFormat` | rewrites an old whole-house blob as child records |
 | `moveHouseToPrivatePath` | copies a house off `houses/<name>`, then tombstones it |
+
+`migrateStoredPass` also derives `cpath` while the plaintext is still in hand:
+that is the only moment it can, and without it a phone that was already
+logged in came back from the update with no path and stopped syncing.
+
+`connectHouse(path)` is how both boot and a manual reconnect attach. It takes
+the private path when that holds something, and otherwise looks for the house
+on the old `houses/<name>` path and moves it. Writing to the private path
+without that check would upload a second copy of the house beside the one
+everyone else is still using.
+
+Rejoining merges rather than replaces: `mergeCloudInto` takes everything the
+cloud has that this device lacks and keeps everything it already had, then
+`cloudFlush()` sends the difference up. `applyCloud` replaces state wholesale,
+which is right for a live update and wrong for a device rejoining after a
+spell on its own — it would drop whatever was recorded while it was alone.

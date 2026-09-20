@@ -266,13 +266,15 @@ textarea.in{resize:none;min-height:46px}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* "a new version is ready" bar */
-#updbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
+#updbar,#syncbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
   background:var(--ink);color:#fff;border-radius:16px;padding:12px 13px 12px 16px;box-shadow:var(--shadow);
   animation:rise .35s both}
-#updbar.show{display:flex}
-#updbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
-#updbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
+#updbar.show,#syncbar.show{display:flex}
+#updbar .ut,#syncbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
+#updbar .ub,#syncbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
 #updbar .ux{color:#9a93ad;font-size:19px;padding:0 4px;line-height:1}
+#updbar.show ~ #syncbar.show{bottom:152px}   /* stack, never overlap */
+#syncbar{background:#5b2416}
 
 /* custom confirm */
 .cfm-bg{position:fixed;inset:0;background:rgba(20,16,30,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
@@ -502,6 +504,7 @@ textarea.in{resize:none;min-height:46px}
 <div id="app"></div>
 <div id="toast"></div>
 <div id="updbar"></div>
+<div id="syncbar"></div>
 <div id="cfmRoot"></div>
 
 <!-- Firebase SDK v10.12.2 (bundled so the app works without internet) -->
@@ -660,7 +663,14 @@ function migrateWholeRupees(d){
    cloud. Replace it with a salted hash the first time we see it. */
 function migrateStoredPass(d){
   if(!d)return d;
-  if(!d.passHash&&d.pass!==undefined&&d.pass!==null)setPass(d,d.pass);
+  if(d.pass!==undefined&&d.pass!==null){
+    // This is the only moment the plaintext is still in hand, and the cloud
+    // path is derived from it. Without this an already-logged-in device came
+    // back from the update with no path, so reconnectCloud() gave up and the
+    // phone quietly went local-only.
+    if(!d.cpath&&d.house)d.cpath=housePath(d.house,d.pass);
+    if(!d.passHash)setPass(d,d.pass);
+  }
   delete d.pass;
   return d;
 }
@@ -865,6 +875,34 @@ function applyCloud(out,notify){
   if(notify)notifyNew(prevTop);
   catchUpRecurring(true);
 }
+/* Used when a phone rejoins a house after a spell on its own: take everything
+   the cloud has that we lack, keep everything we have, and let cloudFlush()
+   push the difference back up. applyCloud() replaces state wholesale, which is
+   right for a live update and wrong here — it would drop every expense added
+   while this device was not syncing. */
+function mergeCloudInto(data){
+  const out=readCloudSnapshot(data);
+  cloud.applying=true;
+  if(out.house)S.house=out.house;
+  if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
+  if(out.lang)S.lang=out.lang;
+  let added=0;
+  CLOUD_COLLS.forEach(c=>{
+    if(!Array.isArray(S[c]))S[c]=[];
+    const have={};S[c].forEach(x=>{if(x&&x.id)have[x.id]=1;});
+    (out[c]||[]).forEach(x=>{if(x&&x.id&&!have[x.id]){S[c].push(x);added++;}});
+  });
+  S.expenses.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.settles.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.debts.sort((a,b)=>(b.date||0)-(a.date||0));
+  S.activity.sort((a,b)=>(b.at||0)-(a.at||0));
+  S.archives.sort((a,b)=>(b.closedAt||0)-(a.closedAt||0));
+  delete S._rupees;migrateWholeRupees(S);
+  localStorage.setItem(KEY,JSON.stringify(S));
+  cloud.mirror=mirrorFromCloud(data);   // so the flush that follows sends our side
+  cloud.applying=false;
+  return added;
+}
 function cloudFlush(){
   if(!(cloud.on&&cloud.ref)||cloud.applying)return;
   const cur=snapshotColls();
@@ -995,7 +1033,7 @@ function reconnectCloud(){ // on boot, if already logged in with cloud config
   if(!(S&&S._auth&&cloud.cfg&&S.cpath))return;   // no remembered path → log in again
   ensureFirebase(ok=>{
     if(!ok)return;
-    cloud.ref=cloud.db.ref(S.cpath);cloud.on=true;cloudListen();
+    connectHouse(S.cpath,true).catch(()=>{cloud.on=false;updateCloudBadge();});
   });
 }
 /* What the app should say about syncing right now, worked out from the real
@@ -1012,12 +1050,24 @@ function cloudStateLabel(st){
   return {off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),
           syncing:t('cloudsyncing'),offline:t('cloudoffline'),error:t('clouderr')}[st]||'';
 }
+/* A phone that is logged in and has a cloud config but no path cannot sync,
+   and the only clue used to be the word "off" behind the cloud icon. Since
+   everything typed into it stays on that phone, it says so out loud. */
+function syncPaused(){return !!(S&&S._auth&&cloud.cfg&&!S.cpath);}
+function renderSyncBar(){
+  const bar=document.getElementById('syncbar');if(!bar)return;
+  if(!syncPaused()){bar.classList.remove('show');bar.innerHTML='';return;}
+  bar.innerHTML=`<div class="ut">⚠️ ${esc(t('syncpaused'))}</div>
+    <button class="ub" onclick="askSyncPass()">${esc(t('reconnect'))}</button>`;
+  bar.classList.add('show');
+}
 function updateCloudBadge(){
   const b=document.getElementById('cloudBtn');if(!b)return;
   const st=cloudState();
   b.textContent={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
   b.title=t('cloud')+' — '+cloudStateLabel(st);
-  b.classList.toggle('warn',st==='offline'||st==='error');
+  b.classList.toggle('warn',st==='offline'||st==='error'||syncPaused());
+  renderSyncBar();
 }
 
 /* ================= I18N ================= */
@@ -1055,7 +1105,7 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
@@ -1129,7 +1179,7 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
@@ -1546,6 +1596,7 @@ function maybeAskWhoAmI(){
 }
 function go(v){view=v;drawView();}
 function drawView(){
+  renderSyncBar();
   ['home','bal','mem','hist'].forEach(v=>{const b=document.getElementById('n-'+v);if(b)b.classList.toggle('on',view===v);});
   renderTop();
   const c=document.getElementById('content');
@@ -1594,6 +1645,7 @@ function renderTop(){
        <div class="sub">${sub}</div>
      </div>
    </div>`;
+  updateCloudBadge();   // the button was just re-rendered; settle its state
 }
 
 /* ---------- WHO AM I ---------- */
@@ -2667,7 +2719,8 @@ function openCloud(){
   const st=cloudState();
   const stColor=st==='synced'?'var(--green)':st==='offline'||st==='error'?'var(--red)':'var(--muted)';
   const stIcon={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
-  let sub=cloud.on?cloudStateLabel(st):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  let sub=cloud.on?cloudStateLabel(st):(syncPaused()?t('syncpaused')
+        :(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group'));
   if(cloud.on&&cloud.pending>0&&st!=='synced')sub+=` · ${cloud.pending} ${t('waiting')}`;
   let body=`<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px">
      <div style="font-size:26px">${stIcon}</div>
@@ -2746,22 +2799,54 @@ function confirmSyncPass(){
   S.cpath=housePath(S.house,v);save();
   syncTo(S.cpath);
 }
+/* Is the house sitting on the old path ours? We hold only a hash, but a
+   pre-migration node still carries the plaintext, so it can be checked
+   against our own hash without asking the user to type it again. */
+function legacyIsOurs(data){
+  const rec=cloudPassRec(data);
+  if(!rec)return false;
+  if(rec.pass!==undefined&&rec.pass!==null)return verifyPass(S,rec.pass);
+  if(rec.passHash&&S.passHash)return rec.passHash===S.passHash&&rec.passSalt===S.passSalt;
+  return false;
+}
+function finishSync(data,quiet){
+  cloud.on=true;
+  if(data){
+    mergeCloudInto(data);
+    if(!isNewFormat(data))migrateCloudFormat();
+  }else{
+    cloud.mirror=emptyMirror();
+    claimName(S.house);
+  }
+  save();cloudListen();
+  if(!quiet){toast(t('syncpushed'));closeSheet();}
+  if(S._auth&&document.querySelector('.nav')){renderTop();drawView();}
+}
+/* Attach to a house, wherever it currently lives.
+
+   The private path is the answer whenever it holds something. When it does
+   not, the house may still be on the old houses/<name> path with the rest of
+   the group working in it, so that is checked before anything is written.
+   Skipping the check meant a phone coming off the update found its private
+   path empty, uploaded its own copy, and quietly split the house in two:
+   this device in one, everyone else in the other. */
+function connectHouse(path,quiet){
+  cloud.ref=cloud.db.ref(path);
+  return onceTimed(cloud.ref).then(snap=>{
+    const data=snap.val();
+    if(data){finishSync(data,quiet);return;}
+    const oldRef=cloud.db.ref(legacyPath(S.house));
+    return onceTimed(oldRef).then(os=>{
+      const od=os.val();
+      if(!od||od.moved||!legacyIsOurs(od)){finishSync(null,quiet);return;}
+      return moveHouseToPrivatePath(oldRef,cloud.ref,od,S.house).then(()=>finishSync(od,quiet));
+    });
+  });
+}
 function syncTo(path){
   ensureFirebase(ok=>{
     if(!ok){toast(t('cloudoffline'));openCloud();return;}
-    cloud.ref=cloud.db.ref(path);
-    onceTimed(cloud.ref).then(snap=>{
-      cloud.on=true;
-      const data=snap.val();
-      if(data){
-        applyCloud(readCloudSnapshot(data),false);   // adopt remote (merged, same house)
-        if(!isNewFormat(data))migrateCloudFormat();
-      }else{
-        cloud.mirror=emptyMirror();
-        claimName(S.house);
-      }
-      save();cloudListen();toast(t('syncpushed'));closeSheet();renderTop();drawView();
-    }).catch(()=>{cloud.on=false;toast(t('cloudoffline'));openCloud();});
+    connectHouse(path,false).catch(()=>{cloud.on=false;toast(t('cloudoffline'));openCloud();});
   });
 }
 function removeCloudCfg(){
@@ -3328,6 +3413,7 @@ function hideSplash(){
 if(S&&S._auth)catchUpRecurring(true);
 render();
 reconnectCloud();
+renderSyncBar();
 setTimeout(hideSplash,900);
 window.addEventListener('load',()=>setTimeout(hideSplash,700));
 
