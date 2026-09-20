@@ -181,6 +181,12 @@ input,select,textarea{outline:none}
 .mrow .nm{font-weight:700;font-size:15px}
 .mrow .sub{font-size:12px;color:var(--muted)}
 .mrow .del{width:32px;height:32px;border-radius:9px;background:var(--red-sf);color:var(--red);display:grid;place-items:center;font-size:15px}
+.mrow .edit{width:32px;height:32px;border-radius:9px;background:var(--line2);color:var(--ink2);display:grid;place-items:center;font-size:14px}
+.mrow .edit:active{background:var(--line)}
+/* colour swatches in the member sheet */
+.swatches{display:flex;flex-wrap:wrap;gap:9px;margin-top:2px}
+.swatch{width:34px;height:34px;border-radius:11px;border:3px solid transparent;transition:.15s}
+.swatch.on{border-color:var(--ink);transform:scale(1.06)}
 
 .empty{text-align:center;padding:46px 24px;color:var(--muted)}
 .empty .em{font-size:46px;margin-bottom:12px}
@@ -1142,7 +1148,7 @@ const L={
   noacc:'තවම ලියාපදිංචි වෙලා නෑ — Register කරන්න',overwrite:'දැනට තියෙන දත්ත මැකිලා අලුත් බෝඩිමක් හැදෙනවා. දිගටම යන්නද?',
   minpass:'රහස් අංකය අකුරු 4ක්වත් වෙන්න ඕන',cancel:'එපා',ok:'ඔව්',yesgo:'ඔව්, දිගටම',yesdel:'ඔව්, අයින් කරන්න',
   yourbal:'ඔයාගේ තත්ත්වය',allsettled:'සියල්ල පැහැදිලයි 🎉',totspent:'මුළු වියදම',thismonth:'මේ මාසය',
-  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',csvexport:'Spreadsheet එකකට (CSV)',csvdone:'CSV එක බාගත්තා ✓',csv_date:'දිනය',csv_desc:'විස්තරය',csv_amount:'ගාණ',csv_payer:'ගෙව්වේ',csv_split:'බෙදුම',csv_people:'ගාන',csv_total:'මුළු එකතුව',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',delarch:'මේ මාසේ අයින් කරන්න',delarchconf:'මේ වහපු මාසේ record එක අයින් කරන්නද? ආපහු ගන්න බෑ.',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
+  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',csvexport:'Spreadsheet එකකට (CSV)',csvdone:'CSV එක බාගත්තා ✓',csv_date:'දිනය',csv_desc:'විස්තරය',csv_amount:'ගාණ',csv_payer:'ගෙව්වේ',csv_split:'බෙදුම',csv_people:'ගාන',csv_total:'මුළු එකතුව',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',editmem:'සාමාජිකයා edit කරන්න',delmem:'සාමාජිකයා අයින් කරන්න',memcolor:'වර්ණය',delarch:'මේ මාසේ අයින් කරන්න',delarchconf:'මේ වහපු මාසේ record එක අයින් කරන්නද? ආපහු ගන්න බෑ.',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
   addexp:'වියදමක් එකතු කරන්න',desc:'මොකක්ද ගත්තේ?',descph:'උදා: රෑ කෑම, සබන්, දත් බෙහෙත්',amt:'මුළු මුදල',
   paidby:'ගෙව්වේ කවුද?',splitb:'බෙදෙන්නේ කවුද?',perp:'එක්කෙනෙකුට',total:'මුළු',save:'සේරම Save කරන්න',
   selall:'ඔක්කොම',selnone:'කිසිවෙක් නෑ',people:'දෙනෙක්',balances:'ශේෂයන්',settleup:'පියවමු',
@@ -1216,7 +1222,7 @@ const L={
   noacc:'No account yet — please Register',overwrite:'This erases existing data and creates a new house. Continue?',
   minpass:'Password must be at least 4 characters',cancel:'Cancel',ok:'Yes',yesgo:'Yes, continue',yesdel:'Yes, delete',
   yourbal:'Overall standing',allsettled:'All settled 🎉',totspent:'Total spent',thismonth:'This month',
-  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',csvexport:'Export to spreadsheet (CSV)',csvdone:'CSV downloaded ✓',csv_date:'Date',csv_desc:'Description',csv_amount:'Amount',csv_payer:'Paid by',csv_split:'Split',csv_people:'People',csv_total:'Total',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',delarch:'Delete this month',delarchconf:'Delete this closed month? It cannot be brought back.',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
+  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',csvexport:'Export to spreadsheet (CSV)',csvdone:'CSV downloaded ✓',csv_date:'Date',csv_desc:'Description',csv_amount:'Amount',csv_payer:'Paid by',csv_split:'Split',csv_people:'People',csv_total:'Total',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',editmem:'Edit member',delmem:'Remove member',memcolor:'Colour',delarch:'Delete this month',delarchconf:'Delete this closed month? It cannot be brought back.',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
   addexp:'Add expense',desc:'What was it?',descph:'e.g. Dinner, soap, toothpaste',amt:'Total amount',
   paidby:'Who paid?',splitb:'Split between',perp:'Per person',total:'Total',save:'Save expense',
   selall:'All',selnone:'None',people:'people',balances:'Balances',settleup:'Settle up',
@@ -2034,25 +2040,52 @@ function viewMem(){
       const st=v>0?`<span class="pos">+${fmt(v)}</span>`:v<0?`<span class="neg">−${fmt(-v)}</span>`:`<span class="zero">${fmt(0)}</span>`;
       h+=`<div class="mrow ${isMe?'isme':''}">${avHtml(m,'av-md')}
         <div class="mid"><div class="nm">${esc(m.name)}${isMe?`<span class="ubadge">${t('you')}</span>`:''}</div><div class="sub">${st}</div></div>
-        <button class="del" onclick="delMember('${m.id}')">🗑</button></div>`;
+        <button class="edit" onclick="openMember('${m.id}')" title="${t('editmem')}">✏️</button></div>`;
     });
     h+=`</div>`;
     h+=`<button class="addbtn" style="background:var(--ink)" onclick="openWhoAmI()">👤 ${myId?`${t('youare')} ${esc((me()||{}).name||'')} · ${t('changeme')}`:t('whoami')}</button>`;}
   h+=`<button class="addbtn" onclick="openMember()">＋ ${t('addmem')}</button></div>`;
   return h;
 }
-function openMember(){
+let memDraft={editId:null,color:''};
+function pickMemColor(c){
+  memDraft.color=c;
+  document.querySelectorAll('#m_colors .swatch').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+}
+/* One sheet for both. Editing is how a member is removed now too: the row
+   itself no longer carries a delete, which was a single mis-tap away from
+   taking someone out of every expense they were part of. */
+function openMember(editId){
   const lng=S.lang;
-  sheet(t('addmem'),`
+  const m=editId?mById(editId):null;
+  memDraft={editId:m?m.id:null,color:m?m.color:AVCOLORS[S.members.length%AVCOLORS.length]};
+  const swatches=AVCOLORS.map(c=>`<button class="swatch${c===memDraft.color?' on':''}" data-c="${c}"
+      style="background:${c}" onclick="pickMemColor('${c}')"></button>`).join('');
+  sheet(m?t('editmem'):t('addmem'),`
     <div class="f"><label>${t('hname').replace(lng==='si'?'බෝඩිමේ නම':'House name',lng==='si'?'නම':'Name')}</label>
       <input class="in" id="m_name" placeholder="${lng==='si'?'සාමාජිකයාගේ නම':'Member name'}" autocomplete="off"
-        onkeydown="if(event.key==='Enter')saveMember()"></div>
-    <button class="addbtn coral" onclick="saveMember()">${t('addmem')}</button>`);
+        value="${m?esc(m.name):''}" onkeydown="if(event.key==='Enter')saveMember()"></div>
+    <div class="f"><label>${t('memcolor')}</label><div class="swatches" id="m_colors">${swatches}</div></div>
+    <button class="addbtn coral" onclick="saveMember()">${m?t('update'):t('addmem')}</button>
+    ${m?`<button class="addbtn" style="background:var(--red-sf);color:var(--red);margin-top:10px"
+        onclick="delMember('${m.id}')">🗑 ${t('delmem')}</button>`:''}`);
   setTimeout(()=>{const f=document.getElementById('m_name');if(f)f.focus();},320);
 }
 function saveMember(){
   const n=document.getElementById('m_name').value.trim();if(!n)return;
-  S.members.push({id:uid(),name:n,color:AVCOLORS[S.members.length%AVCOLORS.length]});
+  const color=memDraft.color||AVCOLORS[S.members.length%AVCOLORS.length];
+  if(memDraft.editId){
+    const m=mById(memDraft.editId);if(!m)return;
+    const was=m.name;
+    m.name=n;m.color=color;
+    // Debts cache the owner's name, so a rename has to reach them or they
+    // keep showing who this person used to be.
+    (S.debts||[]).forEach(d=>{if(d.owner===m.id)d.ownerName=n;});
+    if(was!==n)logAct('edit',n,0);
+    save();closeSheet();toast(t('updated'));drawView();
+    return;
+  }
+  S.members.push({id:uid(),name:n,color});
   logAct('mem',n,0);save();
   closeSheet();toast(t('addedm')+' ✓');drawView();
 }
@@ -2065,7 +2098,7 @@ function delMember(id){
     S.settles=S.settles.filter(s=>s.from!==id&&s.to!==id);
     if(S.debts)S.debts=S.debts.filter(d=>d.owner!==id);   // remove their personal debts too
     if(getMeId()===id)setMeId(null);                       // clear this device's identity if it was them
-    save();toast(t('deleted'));drawView();
+    save();closeSheet();toast(t('deleted'));drawView();
   },{emoji:'🗑️',yes:tA('yesdel')});
 }
 

@@ -175,6 +175,7 @@ carries a live Firebase config and no test may reach it.
 | `personal` | private expenses and the House / Mine scope |
 | `debts` | the debt row and sheet laying out, and CSS class collisions |
 | `archive` | deleting a closed month, locally and in the cloud |
+| `members` | renaming and recolouring a member, and removing one |
 | `csv` | spreadsheet output |
 | `service-worker` | installing offline and the update handshake |
 
