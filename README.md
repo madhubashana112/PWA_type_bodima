@@ -129,6 +129,12 @@ old path — merges anything recorded while it was alone, and syncs from then
 on. Nothing is lost and no second copy of the house is created. Each phone in
 the house needs this once, if it is affected.
 
+The same bar appears whenever a phone is logged in but not syncing for any
+other reason — usually a connection that was down when the app opened. There
+the button reads **Retry**, and the app retries on its own anyway: with a
+backoff up to a minute, and immediately when the device reports it is back
+online or the app returns to the foreground.
+
 ## Tests
 
 ```sh
