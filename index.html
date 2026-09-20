@@ -329,6 +329,19 @@ textarea.in{resize:none;min-height:46px}
 .smode button{flex:1;padding:9px 4px;border-radius:9px;font-weight:700;font-size:12.5px;color:var(--muted);transition:.2s}
 .smode button.on{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px -3px rgba(34,29,51,.25)}
 .smodesub{font-size:12px;color:var(--muted);margin:-3px 2px 10px;font-weight:600}
+
+/* history search & filters */
+.searchrow{position:relative;display:flex;align-items:center;margin-bottom:10px}
+.searchrow .si{position:absolute;left:13px;font-size:15px;pointer-events:none;opacity:.6}
+.searchrow .sx{position:absolute;right:8px;width:28px;height:28px;border-radius:9px;color:var(--muted);font-size:14px}
+.sin{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:13px;
+  padding:12px 14px 12px 38px;font-size:14.5px;font-weight:600;color:var(--ink);transition:.2s}
+.sin::placeholder{color:var(--muted);font-weight:500}
+.sin:focus{border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-sf)}
+.sin::-webkit-search-cancel-button{display:none}
+.selin{padding-left:14px;margin-bottom:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 .part .pin{width:88px;flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);
   background:var(--cream);font-weight:800;font-size:14px;text-align:right;font-family:'Bricolage Grotesque'}
 .part .pin:focus{border-color:var(--coral);background:#fff}
@@ -948,7 +961,7 @@ const L={
   noacc:'තවම ලියාපදිංචි වෙලා නෑ — Register කරන්න',overwrite:'දැනට තියෙන දත්ත මැකිලා අලුත් බෝඩිමක් හැදෙනවා. දිගටම යන්නද?',
   minpass:'රහස් අංකය අකුරු 4ක්වත් වෙන්න ඕන',cancel:'එපා',ok:'ඔව්',yesgo:'ඔව්, දිගටම',yesdel:'ඔව්, අයින් කරන්න',
   yourbal:'ඔයාගේ තත්ත්වය',allsettled:'සියල්ල පැහැදිලයි 🎉',totspent:'මුළු වියදම',thismonth:'මේ මාසය',
-  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',
+  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
   addexp:'වියදමක් එකතු කරන්න',desc:'මොකක්ද ගත්තේ?',descph:'උදා: රෑ කෑම, සබන්, දත් බෙහෙත්',amt:'මුළු මුදල',
   paidby:'ගෙව්වේ කවුද?',splitb:'බෙදෙන්නේ කවුද?',perp:'එක්කෙනෙකුට',total:'මුළු',save:'සේරම Save කරන්න',
   selall:'ඔක්කොම',selnone:'කිසිවෙක් නෑ',people:'දෙනෙක්',balances:'ශේෂයන්',settleup:'පියවමු',
@@ -1022,7 +1035,7 @@ const L={
   noacc:'No account yet — please Register',overwrite:'This erases existing data and creates a new house. Continue?',
   minpass:'Password must be at least 4 characters',cancel:'Cancel',ok:'Yes',yesgo:'Yes, continue',yesdel:'Yes, delete',
   yourbal:'Overall standing',allsettled:'All settled 🎉',totspent:'Total spent',thismonth:'This month',
-  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',
+  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
   addexp:'Add expense',desc:'What was it?',descph:'e.g. Dinner, soap, toothpaste',amt:'Total amount',
   paidby:'Who paid?',splitb:'Split between',perp:'Per person',total:'Total',save:'Save expense',
   selall:'All',selnone:'None',people:'people',balances:'Balances',settleup:'Settle up',
@@ -1838,13 +1851,91 @@ function delMember(id){
 }
 
 /* ---------- HISTORY ---------- */
+/* ---- history: search & filters ----
+   Kept out of S so nothing about how someone is browsing gets synced to the
+   rest of the house. */
+let hist={q:'',member:'',period:'all'};
+function histPeriodFrom(){
+  const n=new Date();
+  if(hist.period==='month')return startOfMonth(Date.now());
+  if(hist.period==='week')return startOfDay(Date.now())-6*864e5;
+  if(hist.period==='prev')return new Date(n.getFullYear(),n.getMonth()-1,1).getTime();
+  return 0;
+}
+function histPeriodTo(){
+  const n=new Date();
+  if(hist.period==='prev')return startOfMonth(Date.now());
+  return Infinity;
+}
+function histMatches(e){
+  const from=histPeriodFrom(),to=histPeriodTo();
+  if(!(e.date>=from&&e.date<to))return false;
+  if(hist.member&&e.payer!==hist.member&&!(e.parts||[]).includes(hist.member))return false;
+  const q=hist.q.trim().toLowerCase();
+  if(!q)return true;
+  const payer=mById(e.payer);
+  if(String(e.desc||'').toLowerCase().includes(q))return true;
+  if(payer&&payer.name.toLowerCase().includes(q))return true;
+  // A number is an amount, matched exactly — searching 450 should not drag in
+  // every 4500 as well.
+  return /^[0-9]+$/.test(q)&&String(Math.round(e.amount))===q;
+}
+function histResults(){return S.expenses.filter(histMatches).sort((a,b)=>b.date-a.date);}
+function setHistMember(id){hist.member=id;redrawHist();}
+function setHistPeriod(p){hist.period=p;redrawHist();}
+function onHistSearch(v){hist.q=v;redrawHist(true);}
+function clearHistFilters(){hist={q:'',member:'',period:'all'};drawView();}
+/* Only the results are rewritten while typing — re-rendering the whole view
+   would tear the search box out from under the keyboard. */
+function redrawHist(keepFocus){
+  const box=document.getElementById('histList');
+  if(!box){drawView();return;}
+  box.innerHTML=histListHtml();
+  const cnt=document.getElementById('histCount');
+  if(cnt)cnt.textContent=histCountLabel();
+  document.querySelectorAll('#histChips button').forEach(b=>{
+    b.classList.toggle('on',b.dataset.period===hist.period);
+  });
+  const sel=document.getElementById('histWho');
+  if(sel&&sel.value!==hist.member)sel.value=hist.member;
+  if(!keepFocus)return;
+  const inp=document.getElementById('histQ');
+  if(inp&&document.activeElement!==inp)inp.focus();
+}
+function histCountLabel(){
+  const n=histResults().length;
+  return n===S.expenses.length?`${n} ${t('expn')}`:`${n}/${S.expenses.length} ${t('expn')}`;
+}
+function histListHtml(){
+  const rows=histResults();
+  if(!rows.length)return `<div class="empty"><div class="em">🔍</div><div class="t">${t('nomatch')}</div>
+    <div class="s">${t('nomatchS')}</div>
+    <button class="link" style="margin-top:10px;font-weight:700;color:var(--coral)" onclick="clearHistFilters()">${t('clearfilt')}</button></div>`;
+  const total=rows.reduce((a,e)=>a+e.amount,0);
+  return rows.map(expRow).join('')+
+    `<div style="display:flex;justify-content:space-between;padding:13px 16px;border-top:1px solid var(--line2);
+       font-weight:800;font-size:13.5px"><span style="color:var(--muted)">${t('filttotal')}</span><span>${fmt(total)}</span></div>`;
+}
 function viewHist(){
   if(!S.expenses.length)return `<div class="stg"><div class="sec-title">${t('history')}</div><div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div></div>`;
-  const sorted=[...S.expenses].sort((a,b)=>b.date-a.date);
-  let h=`<div class="stg"><div class="sec-title">${t('history')} <span class="link">${S.expenses.length} ${t('expn')}</span></div><div class="card">`;
-  h+=sorted.map(expRow).join('');
-  h+=`</div></div>`;
-  return h;
+  const periods=[['all',t('f_all')],['week',t('f_week')],['month',t('f_month')],['prev',t('f_prev')]];
+  return `<div class="stg">
+    <div class="sec-title">${t('history')} <span class="link" id="histCount">${histCountLabel()}</span></div>
+    <div class="searchrow">
+      <span class="si">🔍</span>
+      <input id="histQ" class="sin" type="search" autocomplete="off" placeholder="${t('searchph')}"
+        value="${esc(hist.q)}" oninput="onHistSearch(this.value)">
+      ${hist.q?`<button class="sx" onclick="onHistSearch('');document.getElementById('histQ').value=''">✕</button>`:''}
+    </div>
+    <div class="smode" id="histChips" style="margin-bottom:10px">
+      ${periods.map(([k,lbl])=>`<button data-period="${k}" class="${hist.period===k?'on':''}" onclick="setHistPeriod('${k}')">${lbl}</button>`).join('')}
+    </div>
+    <select class="sin selin" id="histWho" onchange="setHistMember(this.value)">
+      <option value=""${hist.member?'':' selected'}>👥 ${t('f_anyone')}</option>
+      ${S.members.map(m=>`<option value="${m.id}"${hist.member===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}
+    </select>
+    <div class="card" id="histList">${histListHtml()}</div>
+  </div>`;
 }
 /* ---- per-expense payment ticks ----
    Ticking a person records a settlement of exactly their share, from them to
