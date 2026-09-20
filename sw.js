@@ -5,7 +5,7 @@
    Bump VERSION to ship an update. A new worker installs alongside the running
    one and then waits; the page notices it, offers "update now", and posts
    SKIP_WAITING when the user accepts. Nothing swaps under someone mid-edit. */
-const VERSION = '7';
+const VERSION = '8';
 const CACHE = 'bodime-v' + VERSION;
 const SHELL = ['./', './index.html', './manifest.json',
                './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
