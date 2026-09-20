@@ -118,6 +118,7 @@ input,select,textarea{outline:none}
 .topbar .tools{display:flex;gap:8px}
 .icbtn{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#fff;transition:.2s;font-size:15px}
 .icbtn:active{transform:scale(.92);background:rgba(255,255,255,.2)}
+.icbtn.warn{background:rgba(224,70,58,.28)}
 .standing{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:13px 16px}
 .standing .lbl{font-size:11.5px;color:#b9b2cc;letter-spacing:1.2px;text-transform:uppercase;font-weight:700}
 .standing .amt{font-family:'Bricolage Grotesque';font-size:27px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
@@ -264,6 +265,15 @@ textarea.in{resize:none;min-height:46px}
   transition:.3s;box-shadow:var(--shadow);white-space:nowrap;max-width:90%}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* "a new version is ready" bar */
+#updbar{position:absolute;left:12px;right:12px;bottom:90px;z-index:95;display:none;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border-radius:16px;padding:12px 13px 12px 16px;box-shadow:var(--shadow);
+  animation:rise .35s both}
+#updbar.show{display:flex}
+#updbar .ut{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35}
+#updbar .ub{background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
+#updbar .ux{color:#9a93ad;font-size:19px;padding:0 4px;line-height:1}
+
 /* custom confirm */
 .cfm-bg{position:fixed;inset:0;background:rgba(20,16,30,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   z-index:300;display:flex;align-items:center;justify-content:center;padding:30px;opacity:0;transition:opacity .2s}
@@ -319,6 +329,53 @@ textarea.in{resize:none;min-height:46px}
 .smode button{flex:1;padding:9px 4px;border-radius:9px;font-weight:700;font-size:12.5px;color:var(--muted);transition:.2s}
 .smode button.on{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px -3px rgba(34,29,51,.25)}
 .smodesub{font-size:12px;color:var(--muted);margin:-3px 2px 10px;font-weight:600}
+
+/* spend-by-category donut */
+.donutwrap{position:relative;width:200px;max-width:74vw;margin:2px auto 4px;aspect-ratio:1}
+.donut{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.dslice{cursor:pointer;transition:stroke-width .22s cubic-bezier(.2,.8,.2,1)}
+.dmid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;pointer-events:none;line-height:1.15}
+.dmid .dm-e{font-size:18px;margin-bottom:2px}
+.dmid .dm-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.dmid .dm-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
+.dmid .dm-p{font-size:11px;font-weight:700;color:var(--muted)}
+.dlegend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
+.dlg{display:inline-flex;align-items:center;gap:6px;background:var(--line2);border:1px solid transparent;
+  border-radius:11px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);transition:.18s}
+.dlg.on{background:var(--paper);border-color:var(--line);box-shadow:var(--shadow-sm)}
+.dlg b{font-weight:800;font-size:11.5px}
+.dlg .dot{width:9px;height:9px;border-radius:50%;flex:none}
+
+/* "repeats monthly" toggle in the expense sheet */
+.recrow{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);
+  border-radius:14px;padding:11px 13px;margin:4px 0 14px;cursor:pointer;transition:.2s}
+.recrow.on{border-color:var(--coral);background:var(--coral-sf)}
+.recrow .rknob{width:34px;height:34px;border-radius:11px;background:var(--line2);display:grid;place-items:center;
+  font-size:16px;transition:.2s}
+.recrow.on .rknob{background:var(--coral);filter:saturate(1.1)}
+.recrow .rtxt{flex:1;min-width:0}
+.recrow .rt{font-weight:800;font-size:13.5px}
+.recrow .rs{font-size:11.5px;color:var(--muted);font-weight:600}
+.recrow .rdot{width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:.22s;flex:none}
+.recrow .rdot:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 6px -1px rgba(34,29,51,.35);transition:.22s}
+.recrow.on .rdot{background:var(--coral)}
+.recrow.on .rdot:after{transform:translateX(18px)}
+
+/* history search & filters */
+.searchrow{position:relative;display:flex;align-items:center;margin-bottom:10px}
+.searchrow .si{position:absolute;left:13px;font-size:15px;pointer-events:none;opacity:.6}
+.searchrow .sx{position:absolute;right:8px;width:28px;height:28px;border-radius:9px;color:var(--muted);font-size:14px}
+.srchin{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:13px;
+  padding:12px 14px 12px 38px;font-size:14.5px;font-weight:600;color:var(--ink);transition:.2s}
+.srchin::placeholder{color:var(--muted);font-weight:500}
+.srchin:focus{border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-sf)}
+.srchin::-webkit-search-cancel-button{display:none}
+.selin{padding-left:14px;margin-bottom:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 .part .pin{width:88px;flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);
   background:var(--cream);font-weight:800;font-size:14px;text-align:right;font-family:'Bricolage Grotesque'}
 .part .pin:focus{border-color:var(--coral);background:#fff}
@@ -444,6 +501,7 @@ textarea.in{resize:none;min-height:46px}
 </div>
 <div id="app"></div>
 <div id="toast"></div>
+<div id="updbar"></div>
 <div id="cfmRoot"></div>
 
 <!-- Firebase SDK v10.12.2 (bundled so the app works without internet) -->
@@ -460,6 +518,111 @@ textarea.in{resize:none;min-height:46px}
 //# sourceMappingURL=firebase-database-compat.js.map
 </script>
 <script>
+/* ================= PASSWORD HASHING & PRIVATE PATHS =================
+   The house password used to be stored, synced and compared in the clear, so
+   anyone who could read the database — or guess a house name — could read the
+   password and every expense in it. Now:
+
+     • only a salted, stretched SHA-256 of the password is ever stored;
+     • the house's cloud node lives at a path derived from house name +
+       password, so the name alone is not enough to find a house's data.
+
+   SHA-256 is implemented here instead of using crypto.subtle because that API
+   only exists in a secure context, which a file:// or plain WebView build of
+   this app may not have — and it is synchronous, so login stays a plain
+   straight-line function. */
+const sha256=(function(){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+           0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+           0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+           0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+           0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+           0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+           0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+           0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const rotr=(x,n)=>(x>>>n)|(x<<(32-n));
+  function utf8(str){
+    const b=[];
+    for(let i=0;i<str.length;i++){
+      let c=str.charCodeAt(i);
+      if(c<0x80)b.push(c);
+      else if(c<0x800)b.push(0xc0|c>>6,0x80|c&63);
+      else if(c<0xd800||c>=0xe000)b.push(0xe0|c>>12,0x80|(c>>6&63),0x80|c&63);
+      else{c=0x10000+((c&1023)<<10)+(str.charCodeAt(++i)&1023);
+           b.push(0xf0|c>>18,0x80|(c>>12&63),0x80|(c>>6&63),0x80|c&63);}
+    }
+    return b;
+  }
+  const w=new Array(64);
+  return function(str){
+    const b=utf8(str),bits=b.length*8;
+    b.push(0x80);while(b.length%64!==56)b.push(0);
+    for(let i=7;i>=0;i--)b.push(Math.floor(bits/Math.pow(2,8*i))&255);
+    let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,
+        h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+    for(let i=0;i<b.length;i+=64){
+      for(let j=0;j<16;j++)w[j]=(b[i+4*j]<<24|b[i+4*j+1]<<16|b[i+4*j+2]<<8|b[i+4*j+3])|0;
+      for(let j=16;j<64;j++){
+        const x=w[j-15],y=w[j-2];
+        const s0=rotr(x,7)^rotr(x,18)^(x>>>3), s1=rotr(y,17)^rotr(y,19)^(y>>>10);
+        w[j]=(w[j-16]+s0+w[j-7]+s1)|0;
+      }
+      let a=h0,bb=h1,c=h2,d=h3,e=h4,f=h5,g=h6,hh=h7;
+      for(let j=0;j<64;j++){
+        const t1=(hh+(rotr(e,6)^rotr(e,11)^rotr(e,25))+((e&f)^(~e&g))+K[j]+w[j])|0;
+        const t2=((rotr(a,2)^rotr(a,13)^rotr(a,22))+((a&bb)^(a&c)^(bb&c)))|0;
+        hh=g;g=f;f=e;e=(d+t1)|0;d=c;c=bb;bb=a;a=(t1+t2)|0;
+      }
+      h0=(h0+a)|0;h1=(h1+bb)|0;h2=(h2+c)|0;h3=(h3+d)|0;
+      h4=(h4+e)|0;h5=(h5+f)|0;h6=(h6+g)|0;h7=(h7+hh)|0;
+    }
+    return [h0,h1,h2,h3,h4,h5,h6,h7].map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+  };
+})();
+
+const PW_ROUNDS=2000;                       // cheap here, slow for anyone guessing
+function makeSalt(){
+  let s='';
+  try{
+    if(window.crypto&&crypto.getRandomValues){
+      const r=crypto.getRandomValues(new Uint8Array(12));
+      for(let i=0;i<r.length;i++)s+=r[i].toString(16).padStart(2,'0');
+      return s;
+    }
+  }catch(e){}
+  for(let i=0;i<24;i++)s+=Math.floor(Math.random()*16).toString(16);
+  return s;
+}
+function hashPass(salt,pass){
+  let h=sha256('bodime:pw:v1:'+salt+':'+String(pass==null?'':pass));
+  for(let i=1;i<PW_ROUNDS;i++)h=sha256(h+salt);
+  return h;
+}
+/* A record is {passHash,passSalt} on current houses, or {pass} on houses
+   written by an older build. Both verify; the old one is upgraded on login. */
+function verifyPass(rec,pass){
+  if(!rec)return false;
+  if(rec.passHash&&rec.passSalt)return hashPass(rec.passSalt,pass)===rec.passHash;
+  if(rec.pass!==undefined&&rec.pass!==null)return String(rec.pass)===String(pass);
+  return false;
+}
+function setPass(target,pass){
+  target.passSalt=makeSalt();
+  target.passHash=hashPass(target.passSalt,pass);
+  delete target.pass;
+  return target;
+}
+/* Where a house lives in the database. The old path was houses/<name>, which
+   let anyone list or read a house they could name. The new one folds the
+   password in, so it cannot be derived from the name alone. */
+function housePath(house,pass){
+  return 'h/'+sha256('bodime:path:v1:'+keyOf(house)+':'+String(pass==null?'':pass)).slice(0,40);
+}
+function legacyPath(house){return 'houses/'+keyOf(house);}
+/* Public marker so Register can still say "that name is taken" and Login can
+   tell a wrong password apart from a house that does not exist. Holds no data. */
+function namePath(house){return 'names/'+keyOf(house);}
+
 /* ================= STATE ================= */
 const KEY='bodime_data_v2';
 const AVCOLORS=['#F0573C','#16A074','#F2B544','#6C5CE7','#0FB5BA','#E84393','#2D98DA','#E67E22','#26A65B','#8E44AD'];
@@ -469,7 +632,8 @@ let view='home';
 function load(){
   try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.members){
     if(!d.archives)d.archives=[];if(!d.activity)d.activity=[];if(!d.debts)d.debts=[];
-    migrateWholeRupees(d);
+    if(!d.recurring)d.recurring=[];
+    migrateWholeRupees(d);migrateStoredPass(d);
     return d;}}catch(e){}
   return null;
 }
@@ -492,7 +656,15 @@ function migrateWholeRupees(d){
   (d.debts||[]).forEach(x=>{x.total=Math.round(x.total||0);(x.payments||[]).forEach(pm=>{pm.amount=Math.round(pm.amount||0);});});
   d._rupees=1;
 }
-function fresh(){return{house:'',pass:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[]};}
+/* Older builds kept the house password in the clear, both here and in the
+   cloud. Replace it with a salted hash the first time we see it. */
+function migrateStoredPass(d){
+  if(!d)return d;
+  if(!d.passHash&&d.pass!==undefined&&d.pass!==null)setPass(d,d.pass);
+  delete d.pass;
+  return d;
+}
+function fresh(){return{house:'',passHash:'',passSalt:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[],recurring:[]};}
 
 /* ---- "who am I" : per-device identity (never synced) ---- */
 const ME_KEY='bodime_me';
@@ -581,7 +753,10 @@ const BUILTIN_FB_CFG = {
 const HAS_BUILTIN = !!(BUILTIN_FB_CFG && BUILTIN_FB_CFG.apiKey);
 
 const FBCFG_KEY='bodime_fb_cfg';
-let cloud={cfg:loadCfg(),on:false,db:null,ref:null,status:'off',applying:false,builtin:HAS_BUILTIN,mirror:null};
+let cloud={cfg:loadCfg(),on:false,db:null,ref:null,status:'off',applying:false,builtin:HAS_BUILTIN,mirror:null,
+  online:null,      // null = not known yet, from Firebase's own .info/connected
+  pending:0,        // writes handed to Firebase but not yet acknowledged
+  infoRef:null};
 function loadCfg(){
   if(HAS_BUILTIN)return BUILTIN_FB_CFG;
   try{return JSON.parse(localStorage.getItem(FBCFG_KEY)||'null');}catch(e){return null;}
@@ -596,26 +771,50 @@ function keyOf(name){return String(name||'').trim().toLowerCase().replace(/[.#$\
    only the changed child paths, so concurrent adds to different ids never
    clobber. A "mirror" of the last-known cloud state lets save() diff and write
    only what changed. */
-const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts'];
+const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts','recurring'];
 function collMap(arr){const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;}
 function snapshotColls(){
-  const s={meta:{house:S.house||'',pass:S.pass||'',lang:S.lang||'en'}};
+  const s={meta:{house:S.house||'',passHash:S.passHash||'',passSalt:S.passSalt||'',lang:S.lang||'en'}};
   CLOUD_COLLS.forEach(c=>s[c]=collMap(S[c]));
-  return s;
+  /* Detached on purpose. collMap hands back the live objects, and this
+     snapshot becomes cloud.mirror — the "what the cloud already has" side of
+     the diff in cloudFlush. Sharing those objects meant editing an expense in
+     place mutated both sides at once, the diff saw no change, and the edit
+     was never sent to anyone else. */
+  return JSON.parse(JSON.stringify(s));
 }
 function emptyMirror(){const m={meta:{}};CLOUD_COLLS.forEach(c=>m[c]={});return m;}
+/* The mirror must describe what is actually in the cloud, not what we hold
+   locally — otherwise cloudFlush() diffs against itself and skips a write we
+   owe (e.g. replacing a legacy plaintext meta with the hashed one). */
+function mirrorFromCloud(data){
+  const m={meta:(data&&data.meta)?Object.assign({},data.meta):{}};
+  CLOUD_COLLS.forEach(c=>{
+    const v=data?data[c]:null;
+    m[c]=Array.isArray(v)?collMap(v):(v&&typeof v==='object'?Object.assign({},v):{});
+  });
+  return m;
+}
 function isNewFormat(data){return !!(data&&data.meta);}
-function cloudPass(data){return data?(data.meta?data.meta.pass:data.pass):undefined;}
+/* The {passHash,passSalt} (or legacy {pass}) of a house node, for verifyPass. */
+function cloudPassRec(data){
+  if(!data)return null;
+  const m=data.meta||data;
+  return {passHash:m.passHash,passSalt:m.passSalt,pass:m.pass};
+}
 function readCloudSnapshot(data){
   if(!data)return null;
   const out={};
-  out.house=data.meta?data.meta.house:data.house;
-  out.pass =data.meta?data.meta.pass :data.pass;
-  out.lang =data.meta?data.meta.lang :data.lang;
+  const meta=data.meta||data;
+  out.house=meta.house;
+  out.passHash=meta.passHash;
+  out.passSalt=meta.passSalt;
+  out.lang=meta.lang;
   CLOUD_COLLS.forEach(c=>{
     const v=data[c];
     out[c]=Array.isArray(v)?v.slice():(v&&typeof v==='object'?Object.values(v):[]);
   });
+  out.recurring.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   out.activity.sort((a,b)=>(b.at||0)-(a.at||0));
   out.archives.sort((a,b)=>(b.closedAt||0)-(a.closedAt||0));
   out.expenses.sort((a,b)=>(b.date||0)-(a.date||0));
@@ -623,12 +822,12 @@ function readCloudSnapshot(data){
   out.debts.sort((a,b)=>(b.date||0)-(a.date||0));
   return out;
 }
-function collSig(o){return JSON.stringify([o.house,o.pass,o.lang].concat(CLOUD_COLLS.map(c=>collMap(o[c]))));}
+function collSig(o){return JSON.stringify([o.house,o.passHash,o.lang].concat(CLOUD_COLLS.map(c=>collMap(o[c]))));}
 function applyCloud(out,notify){
   const prevTop=(S.activity&&S.activity[0])?S.activity[0].id:null;
   cloud.applying=true;
   if(out.house!==undefined)S.house=out.house;
-  if(out.pass!==undefined)S.pass=out.pass;
+  if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
   if(out.lang)S.lang=out.lang;
   CLOUD_COLLS.forEach(c=>S[c]=out[c]||[]);
   delete S._rupees;migrateWholeRupees(S);
@@ -636,6 +835,7 @@ function applyCloud(out,notify){
   cloud.mirror=snapshotColls();
   cloud.applying=false;cloud.status='synced';updateCloudBadge();
   if(notify)notifyNew(prevTop);
+  catchUpRecurring(true);
 }
 function cloudFlush(){
   if(!(cloud.on&&cloud.ref)||cloud.applying)return;
@@ -650,8 +850,13 @@ function cloudFlush(){
   });
   cloud.mirror=cur;
   const keys=Object.keys(updates);if(!keys.length)return;
-  cloud.ref.update(updates).then(()=>{cloud.status='synced';updateCloudBadge();})
-    .catch(()=>{cloud.status='offline';updateCloudBadge();});
+  /* Firebase queues writes made while offline and resolves them on reconnect,
+     so a pending promise means "not saved yet", not "failed". Count them and
+     let .info/connected say whether we are actually reaching the server. */
+  cloud.pending++;updateCloudBadge();
+  cloud.ref.update(updates)
+    .then(()=>{cloud.pending=Math.max(0,cloud.pending-1);updateCloudBadge();})
+    .catch(()=>{cloud.pending=Math.max(0,cloud.pending-1);cloud.status='error';updateCloudBadge();});
 }
 /* one-time: rewrite an OLD flat-blob house into the new child structure */
 function migrateCloudFormat(){
@@ -677,11 +882,12 @@ function loadFirebase(cb){
 }
 /* Firebase .once() never settles while offline — it waits for a socket. Race
    it against a timeout so login/register fall back to local mode fast. */
-function onceTimed(ref,ms){
-  return Promise.race([
-    ref.once('value'),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms||6000))
-  ]);
+function onceTimed(ref,ms){return withTimeout(ref.once('value'),ms);}
+/* A write made with no connection is queued by Firebase and stays pending
+   until it reconnects, which is right for a background save but not for a
+   step login is waiting on. */
+function withTimeout(p,ms){
+  return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms||6000))]);
 }
 function ensureFirebase(cb){
   if(!cloud.cfg){cb(false);return;}
@@ -696,8 +902,24 @@ function ensureFirebase(cb){
     }catch(e){cloud.status='error';updateCloudBadge();cb(false);}
   });
 }
+/* Firebase reports its own socket state here. Without it the badge only knew
+   what our last write did, so a phone that had silently dropped off wifi kept
+   showing a green tick. */
+function watchConnection(){
+  if(!cloud.db||cloud.infoRef)return;
+  try{
+    cloud.infoRef=cloud.db.ref('.info/connected');
+    cloud.infoRef.on('value',s=>{
+      const was=cloud.online;
+      cloud.online=!!s.val();
+      updateCloudBadge();
+      if(cloud.online&&was===false){cloudFlush();toast(t('cloudback'));}
+    });
+  }catch(e){}
+}
 function cloudListen(){
   if(!cloud.ref)return;
+  watchConnection();
   cloud.ref.on('value',snap=>{
     if(cloud.applying)return;              // ignore the echo of our own writes
     const data=snap.val();
@@ -705,7 +927,7 @@ function cloudListen(){
       cloud.mirror=emptyMirror();cloudFlush();return;
     }
     const out=readCloudSnapshot(data);
-    if(collSig({house:S.house,pass:S.pass,lang:S.lang,members:S.members,expenses:S.expenses,settles:S.settles,archives:S.archives,activity:S.activity,debts:S.debts})===collSig(out)){
+    if(collSig({house:S.house,passHash:S.passHash,lang:S.lang,members:S.members,expenses:S.expenses,settles:S.settles,archives:S.archives,activity:S.activity,debts:S.debts,recurring:S.recurring})===collSig(out)){
       cloud.mirror=snapshotColls();updateCloudBadge();return;   // no change
     }
     applyCloud(out,true);
@@ -742,16 +964,32 @@ function askNotifyPerm(){
 }
 const APP_ICON='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%23F0573C"/><text x="32" y="44" font-size="34" text-anchor="middle">🏠</text></svg>');
 function reconnectCloud(){ // on boot, if already logged in with cloud config
-  if(!(S&&S._auth&&cloud.cfg))return;
+  if(!(S&&S._auth&&cloud.cfg&&S.cpath))return;   // no remembered path → log in again
   ensureFirebase(ok=>{
     if(!ok)return;
-    cloud.ref=cloud.db.ref('houses/'+keyOf(S.house));cloud.on=true;cloudListen();
+    cloud.ref=cloud.db.ref(S.cpath);cloud.on=true;cloudListen();
   });
+}
+/* What the app should say about syncing right now, worked out from the real
+   socket state and the writes still in flight rather than from whatever the
+   last operation happened to set. */
+function cloudState(){
+  if(!cloud.on)return cloud.status==='connecting'?'connecting':'off';
+  if(cloud.status==='error')return 'error';
+  if(cloud.online===false)return 'offline';
+  if(cloud.online===null)return 'connecting';
+  return cloud.pending>0?'syncing':'synced';
+}
+function cloudStateLabel(st){
+  return {off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),
+          syncing:t('cloudsyncing'),offline:t('cloudoffline'),error:t('clouderr')}[st]||'';
 }
 function updateCloudBadge(){
   const b=document.getElementById('cloudBtn');if(!b)return;
-  const map={off:'☁️',connecting:'🔄',synced:'✅',offline:'⚠️',error:'⚠️'};
-  b.textContent=cloud.on?(map[cloud.status]||'☁️'):'☁️';
+  const st=cloudState();
+  b.textContent={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
+  b.title=t('cloud')+' — '+cloudStateLabel(st);
+  b.classList.toggle('warn',st==='offline'||st==='error');
 }
 
 /* ================= I18N ================= */
@@ -765,7 +1003,7 @@ const L={
   noacc:'තවම ලියාපදිංචි වෙලා නෑ — Register කරන්න',overwrite:'දැනට තියෙන දත්ත මැකිලා අලුත් බෝඩිමක් හැදෙනවා. දිගටම යන්නද?',
   minpass:'රහස් අංකය අකුරු 4ක්වත් වෙන්න ඕන',cancel:'එපා',ok:'ඔව්',yesgo:'ඔව්, දිගටම',yesdel:'ඔව්, අයින් කරන්න',
   yourbal:'ඔයාගේ තත්ත්වය',allsettled:'සියල්ල පැහැදිලයි 🎉',totspent:'මුළු වියදම',thismonth:'මේ මාසය',
-  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',
+  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',csvexport:'Spreadsheet එකකට (CSV)',csvdone:'CSV එක බාගත්තා ✓',csv_date:'දිනය',csv_desc:'විස්තරය',csv_amount:'ගාණ',csv_payer:'ගෙව්වේ',csv_split:'බෙදුම',csv_people:'ගාන',csv_total:'මුළු එකතුව',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
   addexp:'වියදමක් එකතු කරන්න',desc:'මොකක්ද ගත්තේ?',descph:'උදා: රෑ කෑම, සබන්, දත් බෙහෙත්',amt:'මුළු මුදල',
   paidby:'ගෙව්වේ කවුද?',splitb:'බෙදෙන්නේ කවුද?',perp:'එක්කෙනෙකුට',total:'මුළු',save:'සේරම Save කරන්න',
   selall:'ඔක්කොම',selnone:'කිසිවෙක් නෑ',people:'දෙනෙක්',balances:'ශේෂයන්',settleup:'පියවමු',
@@ -778,7 +1016,7 @@ const L={
   pickpart:'අඩුම තරමේ එක්කෙනෙක්වත් තෝරන්න',addedm:'එකතු කළා',nomem2:'වියදම් දාන්න කලින් සාමාජිකයෝ එකතු කරන්න',
   paysettle:' ගෙව්වා කියලා සටහන් වුණා',gets:'ලැබෙන්න',pays:'ගෙවන්න',ppl:'දෙනෙක්',
   editexp:'වියදම සංස්කරණය',edit:'සංස්කරණය',update:'යාවත්කාලීන කරන්න',updated:'යාවත්කාලීන කළා ✓',delbtn:'අයින් කරන්න',
-  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',
+  monthrep:'මාසික වාර්තාව',report:'වාර්තාව',thisperiod:'මේ කාලය',spentby:'කවුද කීයක් වැය කළාද',bycat:'මොනවටද වියදම් වුණේ',
   totexp:'වියදම් ගණන',avgper:'එක්කෙනෙකුට සාමා.',expn:'වියදම්',
   rep_day:'අද',rep_week:'සතිය',rep_month:'මාසය',daytrend:'දවස් 7ක වියදම්',weektrend:'සති 6ක වියදම්',
   noperiod:'මේ කාලයට වියදමක් නෑ',
@@ -789,11 +1027,11 @@ const L={
   mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
-  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',
+  cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
   cloudconn:'සම්බන්ධ වෙනවා…',clouderr:'සම්බන්ධ වෙන්න බැරි වුණා',cloudoffline:'Cloud එකට යන්න බැරි — offline',
   cfgpaste:'Firebase config එක මෙතන paste කරන්න',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'සම්බන්ධ කරන්න',disconnect:'Sync නවත්වන්න',removecfg:'Config අයින් කරන්න',badcfg:'Config එක වැරදියි — apiKey නෑ',
-  houseexists:'මේ නමින් බෝඩිමක් cloud එකේ දැනටමත් තියෙනවා — login වෙන්න',enablesync:'මේ බෝඩිම cloud එකට sync කරන්න',
+  houseexists:'මේ නමින් බෝඩිමක් cloud එකේ දැනටමත් තියෙනවා — login වෙන්න',updready:'අලුත් version එකක් ready',updnow:'Update',enablesync:'මේ බෝඩිම cloud එකට sync කරන්න',syncpassnote:'බෝඩිමේ රහස් අංකය දාන්න — cloud එකේ තැන හදන්නේ ඒකෙන්.',
   syncpushed:'Cloud එකට sync කළා ✅',cfgsaved:'Config save කළා',cloudnote:'හැමෝම එකම Firebase config එකයි බෝඩිමේ නම/password එකයි දාලා sync වෙනවා. දත්ත සැබෑ-කාලීනව (real-time) යාවත්කාලීන වෙනවා.',
   cloudhow:'සකස් කරන හැටි',needlogin:'මුලින් login වෙන්න',
   backup:'Backup & Restore',bkTitle:'දත්ත Backup එක',bkSub:'ඔයාගේ මුළු බෝඩිමේ දත්තම එක file එකකට save කරගන්න. Phone එක format කළත්, cloud එක නැති වුණත් ආපහු ගේන්න පුළුවන්.',
@@ -839,7 +1077,7 @@ const L={
   noacc:'No account yet — please Register',overwrite:'This erases existing data and creates a new house. Continue?',
   minpass:'Password must be at least 4 characters',cancel:'Cancel',ok:'Yes',yesgo:'Yes, continue',yesdel:'Yes, delete',
   yourbal:'Overall standing',allsettled:'All settled 🎉',totspent:'Total spent',thismonth:'This month',
-  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',
+  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',csvexport:'Export to spreadsheet (CSV)',csvdone:'CSV downloaded ✓',csv_date:'Date',csv_desc:'Description',csv_amount:'Amount',csv_payer:'Paid by',csv_split:'Split',csv_people:'People',csv_total:'Total',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
   addexp:'Add expense',desc:'What was it?',descph:'e.g. Dinner, soap, toothpaste',amt:'Total amount',
   paidby:'Who paid?',splitb:'Split between',perp:'Per person',total:'Total',save:'Save expense',
   selall:'All',selnone:'None',people:'people',balances:'Balances',settleup:'Settle up',
@@ -852,7 +1090,7 @@ const L={
   pickpart:'Select at least one person',addedm:'Added',nomem2:'Add members before adding expenses',
   paysettle:' marked as paid',gets:'gets back',pays:'owes',ppl:'people',
   editexp:'Edit expense',edit:'Edit',update:'Update',updated:'Updated ✓',delbtn:'Delete',
-  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',
+  monthrep:'Monthly report',report:'Report',thisperiod:'This period',spentby:'Who spent how much',bycat:'Where it went',
   totexp:'Expenses',avgper:'Avg / person',expn:'expenses',
   rep_day:'Today',rep_week:'Week',rep_month:'Month',daytrend:'Last 7 days',weektrend:'Last 6 weeks',
   noperiod:'No expenses in this period',
@@ -863,11 +1101,11 @@ const L={
   mymonth:'My spend this month',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
-  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',
+  cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
   cloudconn:'Connecting…',clouderr:'Could not connect',cloudoffline:'Cannot reach cloud — offline',
   cfgpaste:'Paste your Firebase config here',cfgph:'{ apiKey: "...", databaseURL: "...", ... }',
   connect:'Connect',disconnect:'Stop syncing',removecfg:'Remove config',badcfg:'Invalid config — no apiKey',
-  houseexists:'A house with this name already exists in cloud — please log in',enablesync:'Sync this house to cloud',
+  houseexists:'A house with this name already exists in cloud — please log in',updready:'A new version is ready',updnow:'Update',enablesync:'Sync this house to cloud',syncpassnote:'Enter the house password — the cloud location is derived from it.',
   syncpushed:'Synced to cloud ✅',cfgsaved:'Config saved',cloudnote:'Everyone uses the same Firebase config plus the house name & password to sync. Data updates in real-time across phones.',
   cloudhow:'How to set up',needlogin:'Please log in first',
   backup:'Backup & Restore',bkTitle:'Backup your data',bkSub:'Save your whole house to a file. Restore it even if the phone is wiped or the cloud is lost.',
@@ -1115,28 +1353,36 @@ function doRegister(){
   if(!h)return authError(tA('needname'));
   if(!p)return authError(tA('needpass'));
   if(p!==p2)return authError(tA('mismatch'));
-  const commit=()=>{
-    S={...fresh(),house:h,pass:p,lang:curLang(),members:setupMembers.slice(),_auth:true};
+  const commit=(path)=>{
+    S={...fresh(),house:h,lang:curLang(),members:setupMembers.slice(),_auth:true};
+    setPass(S,p);
+    if(path)S.cpath=path;
     cloud.on=!!(cloud.cfg&&cloud.ref);
     if(cloud.on)cloud.mirror=emptyMirror();   // fresh house → push everything up
-    save();if(cloud.on)cloudListen();view='home';render();
+    save();if(cloud.on){claimName(h);cloudListen();}view='home';render();
   };
   const finish=()=>{
     if(cloud.cfg){
       authBusy(true);
       ensureFirebase(ok=>{
-        if(!ok){authBusy(false);cloud.ref=null;commit();toast(tA('cloudoffline'));return;}
-        const ref=cloud.db.ref('houses/'+keyOf(h));
-        onceTimed(ref).then(snap=>{
+        if(!ok){authBusy(false);cloud.ref=null;commit(null);toast(tA('cloudoffline'));return;}
+        const taken=()=>{
           authBusy(false);
-          if(snap.exists()){
-            authError(tA('houseexists'));
-            setTimeout(()=>{switchAuth('login');const f=document.getElementById('l_house');if(f)f.value=h;},900);
-          }
-          else{cloud.ref=ref;commit();}
-        }).catch(()=>{authBusy(false);cloud.ref=null;commit();toast(tA('cloudoffline'));});
+          authError(tA('houseexists'));
+          setTimeout(()=>{switchAuth('login');const f=document.getElementById('l_house');if(f)f.value=h;},900);
+        };
+        // The name marker and any pre-private-path house both mean "taken".
+        onceTimed(cloud.db.ref(namePath(h))).then(nm=>{
+          if(nm.exists())return taken();
+          return onceTimed(cloud.db.ref(legacyPath(h))).then(old=>{
+            if(old.exists())return taken();
+            authBusy(false);
+            const path=housePath(h,p);
+            cloud.ref=cloud.db.ref(path);commit(path);
+          });
+        }).catch(()=>{authBusy(false);cloud.ref=null;commit(null);toast(tA('cloudoffline'));});
       });
-    }else commit();
+    }else commit(null);
   };
   if(S&&(S.expenses.length||S.members.length))askConfirm(tA('overwrite'),finish,{emoji:'⚠️',yes:tA('yesgo')});
   else finish();
@@ -1149,44 +1395,99 @@ function authBusy(on){
 function localLogin(h,v){
   if(!S){authError(tA('noacc'));setTimeout(()=>switchAuth('register'),700);return;}
   if(h.toLowerCase()!==String(S.house).trim().toLowerCase()){authError(tA('wronghouse'));return;}
-  if(v!==S.pass){authError(tA('wrong'));return;}
-  S._auth=true;view='home';render();
+  if(!verifyPass(S,v)){authError(tA('wrong'));return;}
+  if(!S.passHash)setPass(S,v);          // first login after the plaintext era
+  S.cpath=housePath(S.house,v);
+  save();S._auth=true;view='home';render();
+}
+/* Record that a house name is in use. Holds no data — it only lets Register
+   warn about a duplicate name and lets Login tell a wrong password apart from
+   a house that was never created. */
+function claimName(house){
+  try{cloud.db.ref(namePath(house)).set({at:Date.now()}).catch(()=>{});}catch(e){}
+}
+/* Copy a house off the guessable houses/<name> path onto its private one.
+   The old node is only cleared once the copy has actually landed, so a failed
+   or half-finished move never loses data. */
+function moveHouseToPrivatePath(oldRef,newRef,data,house){
+  return withTimeout(newRef.set(data),10000).then(()=>{
+    // The copy landed, so clearing the old node is safe. Those two writes are
+    // allowed to finish in the background; the login no longer depends on them.
+    oldRef.set({moved:1,at:Date.now()}).catch(()=>{});
+    claimName(house);
+  });
+}
+function adoptCloudHouse(ref,path,data,v){
+  const out=readCloudSnapshot(data);
+  S={...fresh(),house:out.house,lang:out.lang||curLang(),
+     members:out.members,expenses:out.expenses,settles:out.settles,
+     archives:out.archives,activity:out.activity,debts:out.debts,recurring:out.recurring,_auth:true,cpath:path};
+  if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
+  else setPass(S,v);                       // house still on a plaintext password
+  delete S._rupees;migrateWholeRupees(S);
+  cloud.ref=ref;cloud.on=true;cloud.mirror=mirrorFromCloud(data);
+  localStorage.setItem(KEY,JSON.stringify(S));
+  if(!isNewFormat(data))migrateCloudFormat();   // old flat blob → rewrite wholesale
+  else cloudFlush();                            // writes the hashed meta, dropping any meta/pass
+  cloudListen();
+  view='home';render();
 }
 function doLogin(){
   const h=(document.getElementById('l_house').value||'').trim();
   const v=document.getElementById('l_pass').value;
   if(!h){authError(tA('needname'));return;}
+  if(!v){authError(tA('needpass'));return;}
   if(cloud.cfg){
     authBusy(true);
     ensureFirebase(ok=>{
       if(!ok){authBusy(false);localLogin(h,v);return;}
-      const ref=cloud.db.ref('houses/'+keyOf(h));
+      const path=housePath(h,v);
+      const ref=cloud.db.ref(path);
       onceTimed(ref).then(snap=>{
-        authBusy(false);
         const data=snap.val();
-        if(data){
-          if(String(cloudPass(data))!==v){authError(tA('wrong'));return;}
-          const out=readCloudSnapshot(data);
-          S={...fresh(),house:out.house,pass:out.pass,lang:out.lang||curLang(),
-             members:out.members,expenses:out.expenses,settles:out.settles,
-             archives:out.archives,activity:out.activity,debts:out.debts,_auth:true};
-          delete S._rupees;migrateWholeRupees(S);
-          cloud.ref=ref;cloud.on=true;cloud.mirror=snapshotColls();
-          localStorage.setItem(KEY,JSON.stringify(S));
-          cloudListen();
-          if(!isNewFormat(data))migrateCloudFormat();
-          view='home';render();
-        }else if(S&&h.toLowerCase()===String(S.house).trim().toLowerCase()){
-          localLogin(h,v); // exists only on this phone; log in then offer to push
-        }else{
-          authError(tA('nohouse'));
-          setTimeout(()=>{switchAuth('register');const f=document.getElementById('s_house');if(f)f.value=h;},900);
+        if(data){                                    // found at the private path
+          authBusy(false);
+          if(!verifyPass(cloudPassRec(data),v)){authError(tA('wrong'));return;}
+          adoptCloudHouse(ref,path,data,v);
+          return;
         }
+        // Nothing there — this may be a house created before private paths.
+        const oldRef=cloud.db.ref(legacyPath(h));
+        return onceTimed(oldRef).then(os=>{
+          const od=os.val();
+          if(od&&!od.moved){
+            if(!verifyPass(cloudPassRec(od),v)){authBusy(false);authError(tA('wrong'));return;}
+            return moveHouseToPrivatePath(oldRef,ref,od,h).then(()=>{
+              authBusy(false);adoptCloudHouse(ref,path,od,v);
+            },()=>{
+              // Could not copy the house across; leave the original alone and
+              // let them try again with a connection.
+              authBusy(false);authError(tA('cloudoffline'));
+            });
+          }
+          // No house at either path. A name marker (or a "moved" tombstone)
+          // means the house exists and the password is simply wrong.
+          return onceTimed(cloud.db.ref(namePath(h))).then(nm=>{
+            authBusy(false);
+            if(nm.exists()||(od&&od.moved)){authError(tA('wrong'));return;}
+            if(S&&h.toLowerCase()===String(S.house).trim().toLowerCase()){
+              localLogin(h,v); // exists only on this phone; log in then offer to push
+              return;
+            }
+            authError(tA('nohouse'));
+            setTimeout(()=>{switchAuth('register');const f=document.getElementById('s_house');if(f)f.value=h;},900);
+          });
+        });
       }).catch(()=>{authBusy(false);localLogin(h,v);});
     });
   }else localLogin(h,v);
 }
-function logout(){S._auth=false;authMode='login';if(cloud.ref){cloud.ref.off();cloud.ref=null;}cloud.on=false;render();}
+function detachCloud(){
+  if(cloud.ref){cloud.ref.off();cloud.ref=null;}
+  if(cloud.infoRef){cloud.infoRef.off();cloud.infoRef=null;}
+  cloud.on=false;cloud.online=null;cloud.pending=0;cloud.mirror=null;
+}
+function logout(){S._auth=false;authMode='login';detachCloud();render();}
 
 /* ---------- MAIN APP SHELL ---------- */
 function renderApp(app){
@@ -1360,7 +1661,8 @@ function expRow(e){
   const lo=vals.length?Math.min(...vals):0, hi=vals.length?Math.max(...vals):0;
   const even=Math.abs(hi-lo)<0.02;
   const perTxt=even?`${fmt(hi)} / ${t('perp').toLowerCase()}`:`${fmt(lo)} – ${fmt(hi)}`;
-  const badge=splitMode(e)!=='equal'?` · ${splitMode(e)==='exact'?t('exact'):t('shares')}`:'';
+  let badge=splitMode(e)!=='equal'?` · ${splitMode(e)==='exact'?t('exact'):t('shares')}`:'';
+  if(e.ruleId&&recurById(e.ruleId))badge+=' · 🔁';
   const d=new Date(e.date);
   const dstr=d.toLocaleDateString(S.lang==='si'?'si-LK':'en-GB',{day:'numeric',month:'short'});
   const owing=(e.parts||[]).filter(pid=>pid!==e.payer&&mById(pid));
@@ -1375,15 +1677,33 @@ function expRow(e){
     <div class="right"><div class="tot">${fmt(e.amount)}</div><div class="per">${perTxt}</div>${prog}</div>
   </div>`;
 }
-function emojiFor(d){d=d.toLowerCase();
-  if(/කෑම|food|බත|rice|dinner|lunch|breakfast|hopper|kottu|කොත්|rice|meal|hotel|kade|කඩ/.test(d))return '🍛';
-  if(/tea|තේ|coffee|කෝපි|milk|කිරි/.test(d))return '☕';
-  if(/සබන්|soap|දත්|tooth|shampoo|brush|clean|toilet/.test(d))return '🧼';
-  if(/water|වතුර|bill|gas|electric|විදුලි|rent|කුලී/.test(d))return '🧾';
-  if(/bus|three|tuk|travel|trip|fuel|petrol/.test(d))return '🚌';
-  if(/egg|බිත්තර|veg|එළ|fruit|පළ/.test(d))return '🥚';
-  return '🛒';
+/* ---- categories ----
+   The app never asks anyone to pick a category — that would be one more field
+   to fill in for a Rs.200 packet of rice. Instead a description is matched
+   against these patterns, which is also where the row emoji has always come
+   from. Order matters: the first match wins. */
+const CATEGORIES=[
+  {key:'food',   e:'🍛', color:'#F0573C', si:'කෑම',        en:'Food',
+   re:/කෑම|food|බත|rice|dinner|lunch|breakfast|hopper|kottu|කොත්|meal|hotel|kade|කඩ/},
+  {key:'tea',    e:'☕', color:'#E67E22', si:'තේ/කෝපි',    en:'Tea & coffee',
+   re:/tea|තේ|coffee|කෝපි|milk|කිරි/},
+  {key:'clean',  e:'🧼', color:'#0FB5BA', si:'පිරිසිදු කිරීම', en:'Household',
+   re:/සබන්|soap|දත්|tooth|shampoo|brush|clean|toilet/},
+  {key:'bills',  e:'🧾', color:'#F2B544', si:'බිල්පත්',      en:'Bills & rent',
+   re:/water|වතුර|bill|gas|electric|විදුලි|rent|කුලී/},
+  {key:'travel', e:'🚌', color:'#2D98DA', si:'ගමන්',        en:'Travel',
+   re:/bus|three|tuk|travel|trip|fuel|petrol/},
+  {key:'fresh',  e:'🥚', color:'#16A074', si:'එළවළු/පළතුරු', en:'Groceries',
+   re:/egg|බිත්තර|veg|එළ|fruit|පළ/},
+  {key:'other',  e:'🛒', color:'#6C5CE7', si:'වෙනත්',       en:'Other', re:null}
+];
+function categoryOf(desc){
+  const d=String(desc||'').toLowerCase();
+  for(const c of CATEGORIES){if(!c.re||c.re.test(d))return c;}
+  return CATEGORIES[CATEGORIES.length-1];
 }
+function catLabel(c){return S.lang==='si'?c.si:c.en;}
+function emojiFor(d){return categoryOf(d).e;}
 
 /* ---------- BALANCES ---------- */
 function viewBal(){
@@ -1592,13 +1912,92 @@ function delMember(id){
 }
 
 /* ---------- HISTORY ---------- */
+/* ---- history: search & filters ----
+   Kept out of S so nothing about how someone is browsing gets synced to the
+   rest of the house. */
+let hist={q:'',member:'',period:'all'};
+function histPeriodFrom(){
+  const n=new Date();
+  if(hist.period==='month')return startOfMonth(Date.now());
+  if(hist.period==='week')return startOfDay(Date.now())-6*864e5;
+  if(hist.period==='prev')return new Date(n.getFullYear(),n.getMonth()-1,1).getTime();
+  return 0;
+}
+function histPeriodTo(){
+  const n=new Date();
+  if(hist.period==='prev')return startOfMonth(Date.now());
+  return Infinity;
+}
+function histMatches(e){
+  const from=histPeriodFrom(),to=histPeriodTo();
+  if(!(e.date>=from&&e.date<to))return false;
+  if(hist.member&&e.payer!==hist.member&&!(e.parts||[]).includes(hist.member))return false;
+  const q=hist.q.trim().toLowerCase();
+  if(!q)return true;
+  const payer=mById(e.payer);
+  if(String(e.desc||'').toLowerCase().includes(q))return true;
+  if(payer&&payer.name.toLowerCase().includes(q))return true;
+  // A number is an amount, matched exactly — searching 450 should not drag in
+  // every 4500 as well.
+  return /^[0-9]+$/.test(q)&&String(Math.round(e.amount))===q;
+}
+function histResults(){return S.expenses.filter(histMatches).sort((a,b)=>b.date-a.date);}
+function setHistMember(id){hist.member=id;redrawHist();}
+function setHistPeriod(p){hist.period=p;redrawHist();}
+function onHistSearch(v){hist.q=v;redrawHist(true);}
+function clearHistFilters(){hist={q:'',member:'',period:'all'};drawView();}
+/* Only the results are rewritten while typing — re-rendering the whole view
+   would tear the search box out from under the keyboard. */
+function redrawHist(keepFocus){
+  const box=document.getElementById('histList');
+  if(!box){drawView();return;}
+  box.innerHTML=histListHtml();
+  const cnt=document.getElementById('histCount');
+  if(cnt)cnt.textContent=histCountLabel();
+  document.querySelectorAll('#histChips button').forEach(b=>{
+    b.classList.toggle('on',b.dataset.period===hist.period);
+  });
+  const sel=document.getElementById('histWho');
+  if(sel&&sel.value!==hist.member)sel.value=hist.member;
+  if(!keepFocus)return;
+  const inp=document.getElementById('histQ');
+  if(inp&&document.activeElement!==inp)inp.focus();
+}
+function histCountLabel(){
+  const n=histResults().length;
+  return n===S.expenses.length?`${n} ${t('expn')}`:`${n}/${S.expenses.length} ${t('expn')}`;
+}
+function histListHtml(){
+  const rows=histResults();
+  if(!rows.length)return `<div class="empty"><div class="em">🔍</div><div class="t">${t('nomatch')}</div>
+    <div class="s">${t('nomatchS')}</div>
+    <button class="link" style="margin-top:10px;font-weight:700;color:var(--coral)" onclick="clearHistFilters()">${t('clearfilt')}</button></div>`;
+  const total=rows.reduce((a,e)=>a+e.amount,0);
+  return rows.map(expRow).join('')+
+    `<div style="display:flex;justify-content:space-between;padding:13px 16px;border-top:1px solid var(--line2);
+       font-weight:800;font-size:13.5px"><span style="color:var(--muted)">${t('filttotal')}</span><span>${fmt(total)}</span></div>`;
+}
 function viewHist(){
   if(!S.expenses.length)return `<div class="stg"><div class="sec-title">${t('history')}</div><div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div></div>`;
-  const sorted=[...S.expenses].sort((a,b)=>b.date-a.date);
-  let h=`<div class="stg"><div class="sec-title">${t('history')} <span class="link">${S.expenses.length} ${t('expn')}</span></div><div class="card">`;
-  h+=sorted.map(expRow).join('');
-  h+=`</div></div>`;
-  return h;
+  const periods=[['all',t('f_all')],['week',t('f_week')],['month',t('f_month')],['prev',t('f_prev')]];
+  return `<div class="stg">
+    <div class="sec-title">${t('history')}
+      <span><span class="link" style="margin-right:12px" onclick="openRecurring()">🔁 ${(S.recurring||[]).length||''}</span><span class="link" id="histCount">${histCountLabel()}</span></span></div>
+    <div class="searchrow">
+      <span class="si">🔍</span>
+      <input id="histQ" class="srchin" type="search" autocomplete="off" placeholder="${t('searchph')}"
+        value="${esc(hist.q)}" oninput="onHistSearch(this.value)">
+      ${hist.q?`<button class="sx" onclick="onHistSearch('');document.getElementById('histQ').value=''">✕</button>`:''}
+    </div>
+    <div class="smode" id="histChips" style="margin-bottom:10px">
+      ${periods.map(([k,lbl])=>`<button data-period="${k}" class="${hist.period===k?'on':''}" onclick="setHistPeriod('${k}')">${lbl}</button>`).join('')}
+    </div>
+    <select class="srchin selin" id="histWho" onchange="setHistMember(this.value)">
+      <option value=""${hist.member?'':' selected'}>👥 ${t('f_anyone')}</option>
+      ${S.members.map(m=>`<option value="${m.id}"${hist.member===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}
+    </select>
+    <div class="card" id="histList">${histListHtml()}</div>
+  </div>`;
 }
 /* ---- per-expense payment ticks ----
    Ticking a person records a settlement of exactly their share, from them to
@@ -1707,6 +2106,75 @@ function chartHtml(members,cons){
       <div class="cval">${fmt(v)}</div></div>`;
   }).join('')+`</div>`;
 }
+
+/* ---- spend-by-category donut ----
+   Drawn as one SVG circle per slice, using stroke-dasharray to expose just
+   that slice's arc. No chart library: the app has to work with no connection
+   and ships as a single file. */
+let catPick=null;               // which slice the center is describing
+function spendByCategory(exps){
+  const totals={};
+  (exps||[]).forEach(e=>{
+    const k=categoryOf(e.desc).key;
+    totals[k]=(totals[k]||0)+Math.round(e.amount);
+  });
+  return CATEGORIES
+    .map(c=>({cat:c,value:totals[c.key]||0}))
+    .filter(x=>x.value>0)
+    .sort((a,b)=>b.value-a.value);
+}
+function setCat(key){
+  catPick=(catPick===key)?null:key;
+  const box=document.getElementById('catDonut');
+  if(box)box.innerHTML=donutInner(spendByCategory(periodExpenses(reportPeriod)));
+  else drawView();
+}
+function donutInner(slices){
+  const total=slices.reduce((a,x)=>a+x.value,0);
+  if(!total)return '';
+  const R=54,C=2*Math.PI*R;
+  // Default to the largest slice, the way the screenshot leads with its
+  // biggest category, but keep an explicit pick if there is one.
+  let sel=slices.find(x=>x.cat.key===catPick)||slices[0];
+  let at=0;
+  const arcs=slices.map(x=>{
+    const on=x===sel;
+    const len=(x.value/total)*C;
+    // A 1px gap keeps neighbouring slices readable; not on a lone full ring.
+    const gap=slices.length>1?1:0;
+    const seg=`<circle class="dslice${on?' on':''}" cx="70" cy="70" r="${R}" fill="none"
+      stroke="${x.cat.color}" stroke-width="${on?26:20}"
+      stroke-dasharray="${Math.max(len-gap,0).toFixed(2)} ${(C-Math.max(len-gap,0)).toFixed(2)}"
+      stroke-dashoffset="${(-at).toFixed(2)}"
+      onclick="setCat('${x.cat.key}')"></circle>`;
+    at+=len;
+    return seg;
+  }).join('');
+  const pct=Math.round(sel.value/total*100);
+  return `<div class="donutwrap">
+      <svg viewBox="0 0 140 140" class="donut" role="img"
+        aria-label="${esc(catLabel(sel.cat))} ${fmt(sel.value)}, ${pct}%">${arcs}</svg>
+      <div class="dmid">
+        <div class="dm-e">${sel.cat.e}</div>
+        <div class="dm-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
+        <div class="dm-v">${fmt(sel.value)}</div>
+        <div class="dm-p">${pct}%</div>
+      </div>
+    </div>
+    <div class="dlegend">${slices.map(x=>`
+      <button class="dlg${x.cat.key===sel.cat.key?' on':''}" onclick="setCat('${x.cat.key}')">
+        <span class="dot" style="background:${x.cat.color}"></span>
+        <span class="${S.lang==='si'?'sin':''}">${esc(catLabel(x.cat))}</span>
+        <b>${fmt(x.value)}</b>
+      </button>`).join('')}</div>`;
+}
+function categoryChartHtml(exps){
+  const slices=spendByCategory(exps);
+  if(!slices.length)return '';
+  return `<div class="sec-title" style="margin-top:20px">🍩 ${t('bycat')}</div>
+    <div class="card" style="padding:18px 15px 14px" id="catDonut">${donutInner(slices)}</div>`;
+}
+
 /* ---- period helpers for daily/weekly/monthly reports ---- */
 function startOfDay(ts){const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime();}
 function startOfWeek(ts){const d=new Date(ts);d.setHours(0,0,0,0);const dow=(d.getDay()+6)%7;/*Mon=0*/d.setDate(d.getDate()-dow);return d.getTime();}
@@ -1800,7 +2268,7 @@ function saveBudget(){
 }
 function clearBudget(){setMyBudget(0);closeSheet();toast(t('deleted'));drawView();}
 let reportPeriod='month';   // 'day' | 'week' | 'month'
-function setReportPeriod(p){reportPeriod=p;drawView();}
+function setReportPeriod(p){reportPeriod=p;catPick=null;drawView();}
 function viewReport(){
   if(!S.members.length)return emptyMembers();
   const exps=periodExpenses(reportPeriod);
@@ -1828,10 +2296,12 @@ function viewReport(){
   if(!cnt){
     h+=`<div class="card" style="margin-top:18px"><div class="empty"><div class="em">📊</div><div class="t">${t('noperiod')}</div></div></div>`;
   }else{
+    h+=categoryChartHtml(exps);
     h+=`<div class="sec-title" style="margin-top:20px">${t('spentby')}</div>`;
     h+=`<div class="card" style="padding:16px 15px">${chartHtml(S.members,consumedByMember(exps,S.members))}</div>`;
+    h+=`<button class="addbtn" style="background:var(--ink);color:#fff;margin-top:18px" onclick="exportCsv()">⬇️ ${t('csvexport')}</button>`;
     if(reportPeriod==='month')
-      h+=`<button class="addbtn" style="background:var(--gold-sf);color:#946400;margin-top:18px" onclick="closeMonth()">📅 ${t('closemonth')}</button>`;
+      h+=`<button class="addbtn" style="background:var(--gold-sf);color:#946400;margin-top:10px" onclick="closeMonth()">📅 ${t('closemonth')}</button>`;
   }
   if(S.archives.length){
     h+=`<div class="sec-title" style="margin-top:24px">${t('pastmonths')}</div><div class="card">`;
@@ -2059,10 +2529,11 @@ function delDebt(debtId){
 /* ---------- CLOUD SYNC SHEET ---------- */
 function openCloud(){
   const lng=S.lang;
-  const stMap={off:t('cloudoff'),connecting:t('cloudconn'),synced:t('cloudsynced'),offline:t('cloudoffline'),error:t('clouderr')};
-  const stColor=cloud.on&&cloud.status==='synced'?'var(--green)':cloud.status==='offline'||cloud.status==='error'?'var(--red)':'var(--muted)';
-  const stIcon=cloud.on?(cloud.status==='synced'?'✅':cloud.status==='connecting'?'🔄':'⚠️'):'☁️';
-  const sub=cloud.on?(stMap[cloud.status]||''):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  const st=cloudState();
+  const stColor=st==='synced'?'var(--green)':st==='offline'||st==='error'?'var(--red)':'var(--muted)';
+  const stIcon={off:'☁️',connecting:'🔄',synced:'✅',syncing:'🔄',offline:'⚠️',error:'⚠️'}[st]||'☁️';
+  let sub=cloud.on?cloudStateLabel(st):(lng==='si'?'කට්ටිය එක්ක share කරන්න connect වෙන්න':'Connect to share with your group');
+  if(cloud.on&&cloud.pending>0&&st!=='synced')sub+=` · ${cloud.pending} ${t('waiting')}`;
   let body=`<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px">
      <div style="font-size:26px">${stIcon}</div>
      <div><div style="font-weight:800;font-size:15px">${cloud.on?t('cloudon'):t('cloudoff')}</div>
@@ -2092,15 +2563,17 @@ function openCloud(){
 function cloudHowto(lng){
   const steps = lng==='si' ? [
     'console.firebase.google.com එකේ project එකක් හදන්න',
-    'Realtime Database එකක් හදලා, Rules වල read/write true කරන්න (test mode)',
+    'Realtime Database එකක් හදන්න',
     'Project Settings → Your apps → Web app එකක් හදලා firebaseConfig එක copy කරන්න',
-    'bodime.html file එක Notepad එකකින් open කරලා, උඩම තියෙන BUILTIN_FB_CFG එකට ඒ config එක දාන්න',
+    'index.html file එක Notepad එකකින් open කරලා, උඩම තියෙන BUILTIN_FB_CFG එකට ඒ config එක දාන්න',
+    'database.rules.json එකේ තියෙන rules ටික Firebase Rules tab එකට paste කරන්න',
     'ඊට පස්සේ ඒ file එකම කට්ටියට යවන්න — කිසිම setup එකක් නැතුව බෝඩිමේ නම/password එකෙන් හැමෝටම login වෙන්න පුළුවන්'
   ] : [
     'Create a project at console.firebase.google.com',
-    'Create a Realtime Database; set Rules read/write to true (test mode)',
+    'Create a Realtime Database',
     'Project Settings → Your apps → add a Web app, copy firebaseConfig',
-    'Open bodime.html in a text editor and paste it into BUILTIN_FB_CFG at the top',
+    'Open index.html in a text editor and paste it into BUILTIN_FB_CFG at the top',
+    'Paste the rules from database.rules.json into the Rules tab',
     'Send that same file to your housemates — they just log in with the house name & password'
   ];
   return `<div style="margin-top:18px;background:var(--gold-sf);border-radius:14px;padding:14px 16px">
@@ -2118,17 +2591,39 @@ function saveCloudCfg(){
 function enableSync(){
   if(!cloud.cfg)return;
   if(!(S&&S._auth)){toast(t('needlogin'));return;}
+  if(S.cpath){syncTo(S.cpath);return;}
+  askSyncPass();
+}
+/* The cloud path is derived from the house password, which this device may
+   never have typed (house made offline, or restored from a backup). */
+function askSyncPass(){
+  sheet('☁️ '+t('enablesync'),
+    `<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">${t('syncpassnote')}</p>
+     <div class="f"><label>${t('pass')}</label>
+       <input class="in" type="password" id="sync_pass" autocomplete="current-password"></div>
+     <button class="addbtn coral" onclick="confirmSyncPass()">☁️ ${t('enablesync')}</button>`);
+  setTimeout(()=>{const f=document.getElementById('sync_pass');if(f)f.focus();},120);
+}
+function confirmSyncPass(){
+  const v=(document.getElementById('sync_pass')||{}).value||'';
+  if(!verifyPass(S,v)){toast(t('wrong'));return;}
+  if(!S.passHash)setPass(S,v);
+  S.cpath=housePath(S.house,v);save();
+  syncTo(S.cpath);
+}
+function syncTo(path){
   ensureFirebase(ok=>{
     if(!ok){toast(t('cloudoffline'));openCloud();return;}
-    cloud.ref=cloud.db.ref('houses/'+keyOf(S.house));
+    cloud.ref=cloud.db.ref(path);
     onceTimed(cloud.ref).then(snap=>{
       cloud.on=true;
       const data=snap.val();
-      if(data && String(cloudPass(data))===String(S.pass)){
+      if(data){
         applyCloud(readCloudSnapshot(data),false);   // adopt remote (merged, same house)
         if(!isNewFormat(data))migrateCloudFormat();
       }else{
-        cloud.mirror=data?snapshotColls():emptyMirror();
+        cloud.mirror=emptyMirror();
+        claimName(S.house);
       }
       save();cloudListen();toast(t('syncpushed'));closeSheet();renderTop();drawView();
     }).catch(()=>{cloud.on=false;toast(t('cloudoffline'));openCloud();});
@@ -2136,8 +2631,7 @@ function enableSync(){
 }
 function removeCloudCfg(){
   askConfirm(t('removecfg')+'?',()=>{
-    if(cloud.ref){cloud.ref.off();cloud.ref=null;}
-    cloud.on=false;clearCfg();save&&save();toast(t('deleted'));closeSheet();renderTop();
+    detachCloud();clearCfg();save&&save();toast(t('deleted'));closeSheet();renderTop();
   },{emoji:'☁️',yes:tA('yesdel')});
 }
 
@@ -2151,17 +2645,12 @@ function openBackup(){
   sheet('💾 '+t('bkTitle'),body);
 }
 function exportBackup(){
-  const data={_bodime:1,_ver:3,exportedAt:Date.now(),
-    house:S.house,pass:S.pass,lang:S.lang,members:S.members,expenses:S.expenses,
-    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[]};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
+  const data={_bodime:1,_ver:4,exportedAt:Date.now(),
+    house:S.house,passHash:S.passHash,passSalt:S.passSalt,lang:S.lang,members:S.members,expenses:S.expenses,
+    settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[],recurring:S.recurring||[]};
   const safe=(S.house||'bodime').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30)||'bodime';
-  const d=new Date();const p=n=>String(n).padStart(2,'0');
-  a.href=url;a.download=`bodime_${safe}_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+  downloadFile(`bodime_${safe}_${csvDate(Date.now())}.json`,
+               JSON.stringify(data,null,2),'application/json');
   toast(t('bkDone'));
 }
 function importBackup(input){
@@ -2172,16 +2661,195 @@ function importBackup(input){
     let d;try{d=JSON.parse(rd.result);}catch(e){toast(t('bkBad'));return;}
     if(!d||!d._bodime||!Array.isArray(d.members)){toast(t('bkBad'));return;}
     askConfirm(t('bkConf'),()=>{
-      S.house=d.house||S.house;S.pass=d.pass!==undefined?d.pass:S.pass;
+      S.house=d.house||S.house;
+      if(d.passHash){S.passHash=d.passHash;S.passSalt=d.passSalt||'';}
+      else if(d.pass!==undefined&&d.pass!==null)setPass(S,d.pass);   // pre-v4 backup
+      delete S.cpath;                                 // path depends on the password
       if(d.lang)S.lang=d.lang;
       S.members=d.members||[];S.expenses=d.expenses||[];
       S.settles=d.settles||[];S.archives=d.archives||[];S.activity=d.activity||[];S.debts=d.debts||[];
+      S.recurring=d.recurring||[];
       S._auth=true;delete S._rupees;migrateWholeRupees(S);
       const cur=getMeId();if(cur&&!S.members.some(m=>m.id===cur))setMeId(null);
       save();toast(t('bkOk'));closeSheet();view='home';render();reconnectCloud();
     },{emoji:'📤',yes:t('bkYes')});
   };
   rd.readAsText(file);
+}
+
+
+/* ================= RECURRING EXPENSES =================
+   Rent, wifi and the gas bill land every month for the same amount and split.
+   They are kept as rules rather than as flagged expenses, so closing a month
+   (which empties S.expenses into an archive) does not end the series.
+
+   Each month a rule is due for, it produces one expense with an id derived
+   from the rule and the month. Two phones opening the app on the 1st both
+   compute the same id and the same row, so the second write lands on top of
+   the first instead of creating a duplicate. */
+function ymKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function ymAdd(key,n){const a=key.split('-');return ymKey(new Date(+a[0],+a[1]-1+n,1).getTime());}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+/* Midday, so a timezone shift can never drag the date into the month before. */
+function recurDate(key,day){
+  const a=key.split('-'),y=+a[0],m=+a[1]-1;
+  return new Date(y,m,Math.min(day||1,daysInMonth(y,m)),12,0,0,0).getTime();
+}
+function recurById(id){return (S.recurring||[]).find(r=>r.id===id)||null;}
+function recurInstanceId(ruleId,key){return 'r'+ruleId+'-'+key;}
+function archivedHas(id){return (S.archives||[]).some(a=>(a.expenses||[]).some(e=>e.id===id));}
+/* A rule whose payer or participants have since been removed would produce an
+   expense nobody owns, so it is skipped rather than guessed at. */
+function recurUsable(r){
+  if(!r||!r.desc||!(r.amount>0))return false;
+  if(!mById(r.payer))return false;
+  return (r.parts||[]).some(id=>mById(id));
+}
+function rollRecurring(){
+  const rules=S.recurring||[];
+  if(!rules.length)return 0;
+  const nowKey=ymKey(Date.now());
+  let made=0;
+  rules.forEach(r=>{
+    if(!r.lastYm){r.lastYm=nowKey;return;}
+    if(!recurUsable(r)){r.lastYm=nowKey;return;}
+    let cur=r.lastYm,guard=0;
+    while(cur<nowKey&&guard++<60){
+      cur=ymAdd(cur,1);
+      const id=recurInstanceId(r.id,cur);
+      if(!S.expenses.some(e=>e.id===id)&&!archivedHas(id)){
+        const e={id,desc:r.desc,amount:r.amount,payer:r.payer,
+                 parts:(r.parts||[]).filter(pid=>mById(pid)),
+                 date:recurDate(cur,r.day),ruleId:r.id};
+        if(r.split&&r.split.mode&&r.split.mode!=='equal')
+          e.split={mode:r.split.mode,values:Object.assign({},r.split.values||{})};
+        S.expenses.push(e);made++;
+      }
+      r.lastYm=cur;
+    }
+  });
+  return made;
+}
+/* Called at boot, after a sync, and when the app is brought back to the
+   foreground — an installed PWA can sit open across a month boundary. */
+function catchUpRecurring(quiet){
+  let made=0;
+  try{made=rollRecurring();}catch(e){return 0;}
+  if(!made)return 0;
+  logAct('add',t('recadded'),0);
+  save();
+  if(!quiet){toast(made+' '+t('recadded'));if(S._auth&&document.querySelector('.nav'))drawView();}
+  return made;
+}
+function ruleFromDraft(desc,amt,split){
+  return {desc,amount:amt,payer:draft.payer,parts:draft.parts.slice(),
+          split:split?{mode:split.mode,values:Object.assign({},split.values)}:null,
+          day:new Date(draft.date).getDate()};
+}
+/* Turning the toggle on makes (or refreshes) the rule behind this expense;
+   turning it off removes the rule but leaves the expense alone. Returns the
+   rule id the expense should carry, if any. */
+function applyRecurChoice(desc,amt,split,existingRuleId){
+  const had=existingRuleId?recurById(existingRuleId):null;
+  if(!draft.recur){
+    if(had)S.recurring=S.recurring.filter(r=>r.id!==had.id);
+    return null;
+  }
+  const body=ruleFromDraft(desc,amt,split);
+  if(had){Object.assign(had,body);return had.id;}
+  if(!S.recurring)S.recurring=[];
+  // This expense is the series' first instance, so the rule starts due from
+  // next month rather than immediately producing a duplicate of it.
+  const r=Object.assign({id:uid(),createdAt:Date.now(),lastYm:ymKey(draft.date)},body);
+  S.recurring.push(r);
+  return r.id;
+}
+function setRecurToggle(on){
+  draft.recur=!!on;
+  const el=document.getElementById('e_recur');
+  if(el)el.classList.toggle('on',draft.recur);
+}
+function deleteRecur(id){
+  S.recurring=(S.recurring||[]).filter(r=>r.id!==id);
+  save();toast(t('deleted'));
+  if(document.getElementById('sheet').classList.contains('show'))openRecurring();
+  drawView();
+}
+function openRecurring(){
+  const rules=(S.recurring||[]);
+  let body=`<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px">${t('recsub')}</p>`;
+  if(!rules.length){
+    body+=`<div class="empty"><div class="em">🔁</div><div class="t">${t('recnone')}</div><div class="s">${t('recnoneS')}</div></div>`;
+  }else{
+    body+=rules.map(r=>{
+      const p=mById(r.payer);
+      const ok=recurUsable(r);
+      return `<div style="display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);
+         border-radius:14px;padding:12px 13px;margin-bottom:9px${ok?'':';opacity:.6'}">
+        <div style="font-size:21px">${emojiFor(r.desc)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.desc)}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600">
+            ${t('recday')} ${r.day} · ${p?esc(p.name):'?'} · ${(r.parts||[]).length} ${t('ppl')}${ok?'':' · '+t('recpaused')}</div>
+        </div>
+        <div style="font-weight:800;font-size:14px">${fmt(r.amount)}</div>
+        <button class="icbtn" style="background:var(--red-sf);color:var(--red)" onclick="deleteRecur('${r.id}')">🗑</button>
+      </div>`;
+    }).join('');
+  }
+  sheet('🔁 '+t('recurring'),body);
+}
+
+
+/* ---------- CSV EXPORT ----------
+   The JSON backup is for restoring the app; this is for opening the month in
+   a spreadsheet. One row per expense, one column per housemate holding their
+   share, so the sheet adds up down every column. */
+function csvCell(v){
+  const s=String(v==null?'':v);
+  return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+function csvRows(rows){return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');}
+function csvDate(ts){
+  const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function buildCsv(exps){
+  const mem=S.members;
+  const head=[t('csv_date'),t('csv_desc'),t('csv_amount'),t('csv_payer'),t('csv_split'),t('csv_people')]
+    .concat(mem.map(m=>m.name));
+  const rows=[head];
+  const totals={};mem.forEach(m=>totals[m.id]=0);
+  let grand=0;
+  exps.slice().sort((a,b)=>(a.date||0)-(b.date||0)).forEach(e=>{
+    const map=shareMap(e);
+    const payer=mById(e.payer);
+    grand+=Math.round(e.amount);
+    const row=[csvDate(e.date),e.desc||'',Math.round(e.amount),payer?payer.name:'',
+               splitMode(e),(e.parts||[]).filter(mById).length];
+    mem.forEach(m=>{const v=Math.round(map[m.id]||0);totals[m.id]+=v;row.push(v||'');});
+    rows.push(row);
+  });
+  rows.push([t('csv_total'),'',grand,'','',''].concat(mem.map(m=>totals[m.id])));
+  return csvRows(rows);
+}
+function downloadFile(name,text,mime){
+  const blob=new Blob([text],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+}
+function exportCsv(){
+  const exps=periodExpenses(reportPeriod);
+  if(!exps.length){toast(t('nothing2close'));return;}
+  const safe=(S.house||'bodime').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30)||'bodime';
+  // The BOM is what makes Excel read this as UTF-8, and Sinhala descriptions
+  // arrive as Sinhala rather than mojibake.
+  downloadFile(`bodime_${safe}_${reportPeriod}_${csvDate(Date.now())}.csv`,
+               '\ufeff'+buildCsv(exps),'text/csv;charset=utf-8');
+  toast(t('csvdone'));
 }
 
 /* ---------- ADD / EDIT EXPENSE SHEET ---------- */
@@ -2200,9 +2868,10 @@ function openExpense(editId){
   if(!S.members.length){go('mem');toast(t('nomem2'));return;}
   const ex = editId ? S.expenses.find(e=>e.id===editId) : null;
   draft = ex ? {editId:ex.id,payer:ex.payer,parts:(ex.parts||[]).slice(),
-                mode:splitMode(ex),values:Object.assign({},(ex.split&&ex.split.values)||{}),date:ex.date||Date.now()}
+                mode:splitMode(ex),values:Object.assign({},(ex.split&&ex.split.values)||{}),date:ex.date||Date.now(),
+                ruleId:ex.ruleId||null,recur:!!(ex.ruleId&&recurById(ex.ruleId))}
              : {editId:null,payer:(me()?me().id:S.members[0].id),parts:S.members.map(m=>m.id),
-                mode:'equal',values:{},date:Date.now()};
+                mode:'equal',values:{},date:Date.now(),ruleId:null,recur:false};
   const lng=S.lang;
   const descVal = ex ? esc(ex.desc) : '';
   const amtVal = ex ? ex.amount : '';
@@ -2236,6 +2905,11 @@ function openExpense(editId){
      <div class="smodesub" id="e_modesub"></div>
      <div class="partlist" id="e_parts"></div>
      <div id="e_remain"></div>
+   </div>
+   <div class="recrow ${draft.recur?'on':''}" id="e_recur" onclick="setRecurToggle(!draft.recur)">
+     <div class="rknob"><span>🔁</span></div>
+     <div class="rtxt"><div class="rt">${t('recevery')}</div><div class="rs">${t('recevery2')}</div></div>
+     <div class="rdot"></div>
    </div>
    <button class="addbtn coral" onclick="saveExpense()">${ex?t('update'):t('save')}</button>`;
   sheet(ex?t('editexp'):t('addexp'),body);
@@ -2379,12 +3053,16 @@ function saveExpense(){
     const ex=S.expenses.find(e=>e.id===draft.editId);
     if(ex){ex.desc=desc;ex.amount=amt;ex.payer=draft.payer;ex.parts=draft.parts.slice();ex.date=draft.date;
            if(split)ex.split=split;else delete ex.split;
+           const rid=applyRecurChoice(desc,amt,split,ex.ruleId);
+           if(rid)ex.ruleId=rid;else delete ex.ruleId;
            syncTicks(ex);}
     logAct('edit',desc,amt);
     save();closeSheet();toast(t('updated'));drawView();
   }else{
     const e={id:uid(),desc,amount:amt,payer:draft.payer,parts:draft.parts.slice(),date:draft.date};
     if(split)e.split=split;
+    const rid=applyRecurChoice(desc,amt,split,null);
+    if(rid)e.ruleId=rid;
     S.expenses.push(e);
     logAct('add',desc,amt);
     askNotifyPerm();                 // keep notifications enabled so others get pinged
@@ -2444,15 +3122,61 @@ function hideSplash(){
 }
 
 /* ================= BOOT ================= */
+if(S&&S._auth)catchUpRecurring(true);
 render();
 reconnectCloud();
 setTimeout(hideSplash,900);
 window.addEventListener('load',()=>setTimeout(hideSplash,700));
 
-/* ---- PWA: register service worker (only when served over http/https) ---- */
-if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+/* ================= APP UPDATES =================
+   A new service worker installs alongside the running one and then waits, so
+   the swap never happens under someone who is part-way through adding an
+   expense. We show a bar instead and let them choose the moment. */
+let swReg=null,swReloading=false,updateAccepted=false;
+function showUpdateBar(worker){
+  const bar=document.getElementById('updbar');if(!bar||!worker)return;
+  bar.innerHTML=`<div class="ut">✨ ${esc(t('updready'))}</div>
+    <button class="ub" id="updGo">${esc(t('updnow'))}</button>
+    <button class="ux" onclick="document.getElementById('updbar').classList.remove('show')">✕</button>`;
+  bar.classList.add('show');
+  document.getElementById('updGo').onclick=()=>{
+    bar.classList.remove('show');
+    updateAccepted=true;
+    worker.postMessage({type:'SKIP_WAITING'});
+  };
 }
+function watchWorker(reg){
+  if(reg.waiting&&navigator.serviceWorker.controller)showUpdateBar(reg.waiting);
+  reg.addEventListener('updatefound',()=>{
+    const w=reg.installing;if(!w)return;
+    w.addEventListener('statechange',()=>{
+      // "installed" with a controller already present means this is an update,
+      // not the very first install.
+      if(w.state==='installed'&&navigator.serviceWorker.controller)showUpdateBar(w);
+    });
+  });
+}
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    // The very first worker claims the page too; only an update the user
+    // actually accepted should reload it.
+    if(!updateAccepted||swReloading)return;
+    swReloading=true;location.reload();
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{swReg=reg;watchWorker(reg);}).catch(()=>{});
+  });
+  // An installed PWA can sit resumed for days without ever navigating, so
+  // check for a new build whenever it comes back to the foreground.
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&swReg)swReg.update().catch(()=>{});
+  });
+}
+/* An installed PWA can sit resumed across a month boundary without ever
+   reloading, so recurring expenses are caught up on resume too. */
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&S&&S._auth)catchUpRecurring();
+});
 </script>
 </body>
 </html>

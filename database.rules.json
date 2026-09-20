@@ -1,0 +1,72 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "//": [
+      "Realtime Database rules for Bodime. Paste these into",
+      "Firebase console -> Realtime Database -> Rules, or deploy with",
+      "  firebase deploy --only database",
+      "",
+      "The app has no server and no Firebase Auth, so these rules cannot tell",
+      "one visitor from another. What they do enforce:",
+      "  * no node is listable - you can only read a house if you already know",
+      "    its exact path, and that path is a hash of the house name AND the",
+      "    house password (see housePath() in index.html)",
+      "  * a house node can never be deleted wholesale",
+      "  * a password can never be written in the clear again",
+      "  * the old, guessable houses/<name> path is read-only apart from the",
+      "    one-way tombstone the app writes after moving a house off it",
+      "",
+      "Apply these only after every device has opened the updated app at least",
+      "once, so that each house has been migrated to its private path.",
+      "For a genuinely private database, add Firebase Anonymous Auth and gate",
+      "reads on request.auth != null as a follow-up."
+    ],
+
+    "h": {
+      "$house": {
+        ".read": true,
+        ".write": "newData.exists()",
+
+        "meta": {
+          ".validate": "newData.hasChildren(['house', 'passHash', 'passSalt'])",
+          "house":    { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "passHash": { ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{64}$/)" },
+          "passSalt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{8,64}$/)" },
+          "lang":     { ".validate": "newData.isString() && newData.val().length <= 8" },
+          "pass":     { ".validate": false },
+          "$other":   { ".validate": false }
+        },
+
+        "members":  { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "expenses": { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "settles":  { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "archives": { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "activity": { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "debts":    { "$id": { "id": { ".validate": "newData.val() === $id" } } },
+        "recurring":{ "$id": { "id": { ".validate": "newData.val() === $id" } } },
+
+        "$other": { ".validate": false }
+      }
+    },
+
+    "names": {
+      "$name": {
+        ".read": true,
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChild('at')",
+        "at":     { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "houses": {
+      "$name": {
+        ".read": true,
+        ".write": "data.exists() && !data.hasChild('moved') && newData.child('moved').val() === 1",
+        ".validate": "newData.hasChildren(['moved'])"
+      }
+    }
+  }
+}
