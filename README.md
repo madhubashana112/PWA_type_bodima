@@ -23,7 +23,8 @@ is no build step, no bundler and no server to run.
   or just your own.
 - **Personal expenses** — what you spent on yourself, kept on your phone and
   never synced to the house, counted in your own report and budget.
-- **Month close** that files everything into an archive and starts fresh.
+- **Month close** that files everything into an archive and starts fresh;
+  a closed month can be deleted again, with a confirmation.
 - **Search and filters** over the history by text, person and period.
 - **Offline** — the app opens and works with no connection; changes sync when
   it comes back.
@@ -173,6 +174,7 @@ carries a live Firebase config and no test may reach it.
 | `report` | the category donut, and Sinhala labels rendering as text |
 | `personal` | private expenses and the House / Mine scope |
 | `debts` | the debt row and sheet laying out, and CSS class collisions |
+| `archive` | deleting a closed month, locally and in the cloud |
 | `csv` | spreadsheet output |
 | `service-worker` | installing offline and the update handshake |
 
