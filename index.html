@@ -336,13 +336,13 @@ textarea.in{resize:none;min-height:46px}
 .donutwrap{position:relative;width:200px;max-width:74vw;margin:2px auto 4px;aspect-ratio:1}
 .donut{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
 .dslice{cursor:pointer;transition:stroke-width .22s cubic-bezier(.2,.8,.2,1)}
-.dmid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+.donutwrap .dn-mid{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;pointer-events:none;line-height:1.15}
-.dmid .dm-e{font-size:18px;margin-bottom:2px}
-.dmid .dm-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
+.donutwrap .dn-e{font-size:18px;margin-bottom:2px}
+.donutwrap .dn-n{font-size:11px;font-weight:700;color:var(--muted);max-width:100%;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.dmid .dm-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
-.dmid .dm-p{font-size:11px;font-weight:700;color:var(--muted)}
+.donutwrap .dn-v{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;letter-spacing:-.3px;margin-top:2px}
+.donutwrap .dn-p{font-size:11px;font-weight:700;color:var(--muted)}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
 .dlg{display:inline-flex;align-items:center;gap:6px;background:var(--line2);border:1px solid transparent;
   border-radius:11px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);transition:.18s}
@@ -419,7 +419,7 @@ textarea.in{resize:none;min-height:46px}
 .owehero .sub{font-size:12.5px;opacity:.85;margin-top:2px}
 .debt{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line2)}
 .debt:last-child{border-bottom:none}
-.debt .dav{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0}
+.dav{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0}
 .debt .dmid{flex:1;min-width:0}
 .debt .dnm{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .debt .dmeta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -2237,11 +2237,11 @@ function donutInner(slices){
   return `<div class="donutwrap">
       <svg viewBox="0 0 140 140" class="donut" role="img"
         aria-label="${esc(catLabel(sel.cat))} ${fmt(sel.value)}, ${pct}%">${arcs}</svg>
-      <div class="dmid">
-        <div class="dm-e">${sel.cat.e}</div>
-        <div class="dm-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
-        <div class="dm-v">${fmt(sel.value)}</div>
-        <div class="dm-p">${pct}%</div>
+      <div class="dn-mid">
+        <div class="dn-e">${sel.cat.e}</div>
+        <div class="dn-n ${S.lang==='si'?'sin':''}">${esc(catLabel(sel.cat))}</div>
+        <div class="dn-v">${fmt(sel.value)}</div>
+        <div class="dn-p">${pct}%</div>
       </div>
     </div>
     <div class="dlegend">${slices.map(x=>`
