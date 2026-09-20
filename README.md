@@ -94,9 +94,25 @@ after every device has opened the updated app at least once.
 
 ## Updates
 
-`sw.js` caches the app shell. Bump `VERSION` in it to ship a new build. The new
-worker installs alongside the running one and waits; the page notices, offers
-an update bar, and swaps only when the user taps it — never mid-expense.
+`sw.js` caches the app shell. **Bump `VERSION` in it whenever you ship**, or a
+phone with the app installed is never offered the new build — it only reaches
+someone who happens to navigate. The new worker installs alongside the running
+one and waits; the page notices, offers an update bar, and swaps only when the
+user taps it, never mid-expense.
+
+### If a phone stops syncing after an update
+
+A house's cloud location is derived from its password, and the password is
+only ever held for the moment it takes to hash it. A phone that was already
+logged in when the private-path change first landed came back from it with no
+location, and quietly went local-only.
+
+Such a phone now says so: a bar above the nav reads *"Not syncing — changes
+stay on this phone"*, with a **Connect** button that asks for the house
+password once. It then finds the existing house — including one still on the
+old path — merges anything recorded while it was alone, and syncs from then
+on. Nothing is lost and no second copy of the house is created. Each phone in
+the house needs this once, if it is affected.
 
 ## Tests
 
@@ -108,10 +124,20 @@ node tests/run.js auth csv     # just those
 
 The suites drive the real app in Chromium against an in-memory stand-in for
 the Realtime Database, and block every request off localhost — `index.html`
-carries a live Firebase config and no test may reach it. They cover
-registration and login, migrating an old house, the sync state machine,
-offline edits, recurring rules, CSV output and the service-worker update
-handshake.
+carries a live Firebase config and no test may reach it.
+
+| Suite | |
+|---|---|
+| `auth` | registering, logging in, migrating a house off the old path |
+| `sync` | connection state, offline edits, edits made in place |
+| `rejoin` | a phone that updated mid-session finding its way back |
+| `history` | search and filters |
+| `recurring` | monthly rules, the date maths, catching up |
+| `report` | the category donut, and Sinhala labels rendering as text |
+| `personal` | private expenses and the House / Mine scope |
+| `debts` | the debt row and sheet laying out, and CSS class collisions |
+| `csv` | spreadsheet output |
+| `service-worker` | installing offline and the update handshake |
 
 ## Layout
 

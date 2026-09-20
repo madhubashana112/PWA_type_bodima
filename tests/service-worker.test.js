@@ -51,7 +51,12 @@ const server = http.createServer((req, res) => {
 
   s.section('3. a new build offers itself instead of swapping underneath');
   const sw = fs.readFileSync(path.join(DIR, 'sw.js'), 'utf8');
-  fs.writeFileSync(path.join(DIR, 'sw.js'), sw.replace("const VERSION = '2';", "const VERSION = '3';"));
+  // Read the shipped version rather than assuming it: hardcoding the number
+  // here would turn this into a silent no-op the next time it is bumped.
+  const cur = /const VERSION = '([^']+)'/.exec(sw);
+  s.check('sw.js declares a version', !!cur, sw.slice(0, 120));
+  const next = String(Number(cur[1]) + 1);
+  fs.writeFileSync(path.join(DIR, 'sw.js'), sw.replace(cur[0], "const VERSION = '" + next + "'"));
   await page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update()));
   await page.waitForSelector('#updbar.show', { timeout: 15000 }).catch(() => {});
   s.check('the update bar appears', await page.evaluate(() => document.getElementById('updbar').classList.contains('show')));
@@ -71,9 +76,9 @@ const server = http.createServer((req, res) => {
       setTimeout(() => res('timed out'), 4000);
     });
   }));
-  s.check('the new worker is active', ver === '3', ver);
+  s.check('the new worker is active', ver === next, [ver, next]);
   const caches = await page.evaluate(() => window.caches.keys());
-  s.check('the old cache is evicted', caches.length === 1 && caches[0] === 'bodime-v3', caches);
+  s.check('the old cache is evicted', caches.length === 1 && caches[0] === 'bodime-v' + next, caches);
 
   await b.close();
   server.close();
