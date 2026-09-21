@@ -14,7 +14,7 @@ const PORT = Number(process.env.BODIME_PORT || 8099);
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
                 '.png': 'image/png', '.css': 'text/css' };
 
-const ALL = ['auth', 'sync', 'rejoin', 'history', 'recurring', 'report', 'personal', 'debts', 'archive', 'members', 'csv', 'service-worker'];
+const ALL = ['auth', 'sync', 'rejoin', 'deletion', 'history', 'recurring', 'report', 'personal', 'debts', 'archive', 'members', 'csv', 'service-worker'];
 const want = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 
 function serve(dir, port) {

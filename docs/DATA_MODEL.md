@@ -164,6 +164,7 @@ h/<hash of house name + password>
   meta/        { house, passHash, passSalt, lang }
   members/<id>      expenses/<id>     settles/<id>
   archives/<id>     activity/<id>     debts/<id>     recurring/<id>
+  tombs/<collection>/<id>   when that record was deleted
 
 names/<house name>   { at }          public marker, holds no data
 houses/<house name>  { moved: 1 }    tombstone left by a migrated house
@@ -237,3 +238,50 @@ cloud has that this device lacks and keeps everything it already had, then
 `cloudFlush()` sends the difference up. `applyCloud` replaces state wholesale,
 which is right for a live update and wrong for a device rejoining after a
 spell on its own — it would drop whatever was recorded while it was alone.
+
+## Deletions
+
+A merge is a union, and a union cannot tell *"I have never seen this record"*
+from *"I deleted this record"*. Absence alone therefore brought deleted
+expenses back: a phone that had been offline still held the record, the merge
+on rejoining treated it as news, and `cloudFlush()` then pushed it up to
+everyone. The same happened whenever a device rejoined an older snapshot, or
+restored a backup taken before the delete.
+
+So a deletion is *recorded*, not merely allowed to happen. `S.tombs` holds,
+per collection, when each removed id was removed, and it syncs like any other
+child path. The nesting is not decoration: a Realtime Database key cannot
+contain a slash, so a flat `"expenses/<id>"` key is rejected outright — and it
+lets `cloudFlush()` send one marker at a time, so two phones deleting at once
+do not overwrite each other's markers.
+
+| | |
+|---|---|
+| `noteDeletions()` | diffs each save against the last and marks what vanished |
+| `isTombed(c, id)` | whether a record is known to be deleted |
+| `applyTombs()` | drops any tombed record that has crept back into `S` |
+| `mergeTombs(t)` | unions an incoming set, latest timestamp winning |
+| `pruneTombs(d)` | forgets markers older than `TOMB_TTL` (90 days) |
+
+Deletions are spotted centrally rather than at each call site: `save()` calls
+`noteDeletions()` first, so every path that removes something is covered —
+deleting an expense, removing a member, undoing a settle, closing a month,
+deleting an archive — with no need for each of them to remember. A record
+that reappears as a genuine re-creation, which recurring expenses do because
+they derive their ids, clears its own marker.
+
+`mergeCloudInto` and `applyCloud` both merge the incoming markers **before**
+merging records, skip anything tombed, and then `applyTombs()`. A device that
+has been away therefore learns about the deletion in the same snapshot that
+carries the record, and never re-uploads it. Markers are pruned after 90 days
+— longer than any phone is plausibly stale — so `tombs` cannot grow forever.
+
+### Starting over
+
+Settings → Backup → **Erase everything** clears the house for the whole
+group. It tombstones every record before emptying the collections, so the
+deletion reaches other devices as a deletion rather than as an empty state
+they would helpfully refill. It then waits for that flush to land and wipes
+the device: every `localStorage` key above, the service worker's caches, the
+registration itself, and finally a reload. Two confirmations guard it, and
+the second says plainly that it is for everyone.

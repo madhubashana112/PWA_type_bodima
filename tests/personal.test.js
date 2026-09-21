@@ -91,8 +91,19 @@ const fs = require('fs');
           await page.evaluate(() => categoryOf('Haircut').key === 'other'));
   const tr = await page.evaluate(() => mineTrend(true).reduce((t, d) => t + d.val, 0));
   s.check('the trend counts something', tr > 0, tr);
-  s.check('the trend never exceeds the house trend',
-          await page.evaluate(() => mineTrend(true).every((d, i) => d.val <= weekTrend()[i].val)));
+  // Personal spending is mine alone and is in no house figure, so the bar can
+  // stand taller than the house's in a week where only I spent. Take it off
+  // and what is left is my share, which never can.
+  s.check('my share of it never exceeds the house trend',
+          await page.evaluate(() => {
+            const cw = startOfWeek(Date.now()), span = 7 * 86400000, house = weekTrend();
+            return mineTrend(true).every((d, i) => {
+              const from = cw - (5 - i) * span, to = from + span;
+              const pers = myPersonal().filter(x => x.date >= from && x.date < to)
+                                       .reduce((t, x) => t + Math.round(x.amount || 0), 0);
+              return d.val - pers <= house[i].val;
+            });
+          }));
 
   s.section('7. the budget counts personal spending');
   await page.evaluate(() => setMyBudget(10000));
