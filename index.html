@@ -1942,10 +1942,12 @@ function viewHome(){
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
     </div>`;
   h+=budgetCardHtml('month');   // this device's own monthly budget, same card as on Report
-  if(owe>0||myList.length){
-    h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:0;margin-bottom:14px" onclick="go('debts')">
-      💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
-  }
+  // Always shown, even at Rs.0 — with the header icon gone, this is the only
+  // way from Home into the debts screen, and hiding it whenever nothing was
+  // owed used to leave someone with no debts (or none of their own) with no
+  // way to get there at all to add one.
+  h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:0;margin-bottom:14px" onclick="go('debts')">
+    💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
   h+=`<button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;
   h+=`<button class="addbtn coral" style="margin-top:0;margin-bottom:20px" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   h+=`<div class="sec-title">${t('recent')} ${S.expenses.length>6?`<span class="link" onclick="go('hist')">${t('all')} →</span>`:''}</div>`;
