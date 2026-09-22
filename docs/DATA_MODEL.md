@@ -167,11 +167,14 @@ about what is in `S`, the cloud, or another device's view of Home changes,
 and a device signed in as someone else sees only its own identity's entries
 there, same as everywhere else personal expenses appear.
 
-`budgetCardHtml(period)` is shared between Home and Report rather than
-duplicated: Report calls it with no argument and it follows whichever period
-tab is selected there, while Home — which has no period tabs of its own —
-always passes `'month'` explicitly, so it shows a stable figure regardless
-of what Report was last left on.
+`budgetCardHtml(period)` — the full card, with the "set a budget" prompt,
+the progress bar and the edit link — stays a Report-only thing; it was tried
+on Home too and turned out too heavy for that screen. What Home shows
+instead is a third, compact tile alongside "Total spent" and "This month":
+the same figure Report's Mine scope calls "My spending" (this identity's
+share of the house plus its own personal entries), always for the month
+since Home has no period tabs to pick a different one from, and only when
+an identity is set — same guard `budgetCardHtml` uses.
 
 Because they live outside `S`, the JSON backup carries them explicitly under
 `personal` (and the budgets under `budget` and `budgetWeek`) — otherwise a

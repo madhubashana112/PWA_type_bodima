@@ -1936,12 +1936,16 @@ function viewHome(){
   const myList=meId0?allDebts().filter(d=>d.owner===meId0):allDebts();
   const owe=myList.reduce((a,d)=>a+debtRemaining(d),0);
   const over=myList.some(debtOverdue);
+  // Same figure as the "My spending" tile in Report's Mine scope — this
+  // device's share of the house plus its own personal entries — but always
+  // for the month, since Home has no period tabs of its own to pick from.
+  const mySpend=meId0?mineAsExpenses('month').reduce((s,e)=>s+e.amount,0):0;
   let h=`<div class="stg">
     <div class="stats">
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
+      ${meId0?`<div class="stat"><div class="ic">🧍</div><div class="v">${fmt(mySpend)}</div><div class="l">${t('myspend')}</div></div>`:''}
     </div>`;
-  h+=budgetCardHtml('month');   // this device's own monthly budget, same card as on Report
   // Always shown, even at Rs.0 — with the header icon gone, this is the only
   // way from Home into the debts screen, and hiding it whenever nothing was
   // owed used to leave someone with no debts (or none of their own) with no
