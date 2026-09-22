@@ -1941,6 +1941,7 @@ function viewHome(){
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
     </div>`;
+  h+=budgetCardHtml('month');   // this device's own monthly budget, same card as on Report
   if(owe>0||myList.length){
     h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:0;margin-bottom:14px" onclick="go('debts')">
       💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
@@ -2633,10 +2634,12 @@ function budgetLabel(period,key){
             budgetnew:'budgetneww',budgetupd:'budgetupdw',mymonth:'myweek'};
   return t(period==='week'&&wk[key]?wk[key]:key);
 }
-function budgetCardHtml(){
+function budgetCardHtml(forcedPeriod){
   const meId=getMeId();
   if(!meId)return ''; // budget is personal; needs an identity
-  const period=reportPeriod==='week'?'week':'month';   // Today shares the month view
+  // Report passes nothing and follows whichever period tab is selected
+  // there; Home has no such tab, so it asks for the monthly one explicitly.
+  const period=forcedPeriod||(reportPeriod==='week'?'week':'month');
   const budget=myBudget(period);
   const exps=periodExpenses(period);
   const spent=Math.round(consumedByMember(exps,S.members)[meId]||0)+personalTotal(period);

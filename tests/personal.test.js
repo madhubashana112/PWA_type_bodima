@@ -242,6 +242,35 @@ const fs = require('fs');
           !(await page.evaluate(() => document.querySelector('.stg .card').textContent)).includes('Haircut'));
   await page.evaluate(id => setMeId(id), await page.evaluate(() => S.members[0].id));
 
+  s.section('16. the budget card is on Home too, always the monthly one');
+  // Report is left on 'week' on purpose — Home has no period tabs, so it
+  // must not just inherit whatever Report was last showing.
+  await page.evaluate(() => {
+    setMyBudget(12000); setMyBudget(4000, 'week');
+    reportPeriod = 'week'; view = 'home'; drawView();
+  });
+  await page.waitForTimeout(350);
+  const home = await page.evaluate(() => {
+    const kids = Array.from(document.querySelector('.stg').children);
+    return { budget: kids.findIndex(el => el.classList.contains('budget')),
+             report: kids.findIndex(el => el.classList.contains('reportbtn')),
+             text: (document.querySelector('.stg .budget') || {}).textContent || '' };
+  });
+  s.check('the card is there, above Report', home.budget !== -1 && home.budget < home.report, home);
+  s.check('it shows the monthly figure, not the weekly one, despite Report being on Week',
+          home.text.includes((12000).toLocaleString('en-US')) && !home.text.includes((4000).toLocaleString('en-US')),
+          home.text);
+  await page.click('.stg .budget .bedit');
+  await page.waitForTimeout(400);
+  s.check('editing it from Home edits the monthly target', await page.evaluate(() => budgetDraftPeriod === 'month'));
+  await page.fill('#bg_amt', '9000');
+  await page.click('#sheet .addbtn.coral');
+  await page.waitForTimeout(400);
+  s.check('the monthly target is what got saved', await page.evaluate(() => myBudget()) === 9000);
+  s.check('the weekly one is untouched', await page.evaluate(() => myBudget('week')) === 4000);
+  s.check('still on Home afterwards', await page.evaluate(() => view === 'home'));
+  await page.evaluate(() => { setMyBudget(0); setMyBudget(0, 'week'); reportPeriod = 'month'; });
+
   await ctx.close();
   await b.close();
   s.finish();
