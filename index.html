@@ -139,6 +139,8 @@ input,select,textarea{outline:none}
 .stat .ic{font-size:18px;margin-bottom:6px}
 .stat .v{font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;letter-spacing:-.4px}
 .stat .l{font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
+.stat.owe{background:linear-gradient(135deg,#2D98DA,#1B6FAE);border:none;color:#fff;cursor:pointer;box-shadow:0 10px 22px -12px rgba(45,152,218,.6)}
+.stat.owe .l{color:rgba(255,255,255,.85)}
 
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm);overflow:hidden}
 .exp{display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line2)}
@@ -1946,7 +1948,7 @@ function viewHome(){
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
       ${meId0?`<div class="stat"><div class="ic">🧍</div><div class="v">${fmt(mySpend)}</div><div class="l">${t('myspend')}</div></div>`:''}
-      <div class="stat" style="cursor:pointer" onclick="go('debts')">
+      <div class="stat owe" onclick="go('debts')">
         <div class="ic">💳</div><div class="v">${fmt(owe)}${over?' ⚠️':''}</div><div class="l">${t('moneyowe')}</div></div>
     </div>`;
   h+=`<button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;

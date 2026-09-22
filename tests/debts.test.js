@@ -172,6 +172,12 @@ async function overlaps(page, a, bSel) {
   });
   s.check('it sits in the stats grid, above Report', tileInfo.tileText !== null && tileInfo.statsIdx < tileInfo.reportIdx, tileInfo);
   s.check('it names Money I Owe', /Money I Owe|ණයයි/.test(tileInfo.tileText), tileInfo.tileText);
+  const oweColour = await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('.stats .stat')).find(x => x.textContent.includes('💳'));
+    return el ? getComputedStyle(el).backgroundImage : '';
+  });
+  s.check('it stands out in blue, not the plain white the other tiles use',
+          oweColour.includes('gradient') && /45,\s*152,\s*218/.test(oweColour), oweColour);
   await page.evaluate(() => Array.from(document.querySelectorAll('.stats .stat')).find(el => el.textContent.includes('💳')).click());
   await page.waitForTimeout(300);
   s.check('tapping it opens the debts list', await page.evaluate(() => view === 'debts'));
