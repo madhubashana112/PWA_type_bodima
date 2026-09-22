@@ -170,11 +170,17 @@ there, same as everywhere else personal expenses appear.
 `budgetCardHtml(period)` — the full card, with the "set a budget" prompt,
 the progress bar and the edit link — stays a Report-only thing; it was tried
 on Home too and turned out too heavy for that screen. What Home shows
-instead is a third, compact tile alongside "Total spent" and "This month":
-the same figure Report's Mine scope calls "My spending" (this identity's
-share of the house plus its own personal entries), always for the month
-since Home has no period tabs to pick a different one from, and only when
-an identity is set — same guard `budgetCardHtml` uses.
+instead is a compact tile alongside "Total spent" and "This month": the
+same figure Report's Mine scope calls "My spending" (this identity's share
+of the house plus its own personal entries), always for the month since
+Home has no period tabs to pick a different one from, and only when an
+identity is set — same guard `budgetCardHtml` uses.
+
+A fourth tile, Money I Owe, sits beside it — the button that used to run the
+full width of the screen on its own is gone, folded into the stats grid
+instead. Unlike My spending it does not need an identity: with none set it
+falls back to every debt in the house, the same way `viewDebts()` already
+does, and simply becomes the third tile rather than the fourth.
 
 Because they live outside `S`, the JSON backup carries them explicitly under
 `personal` (and the budgets under `budget` and `budgetWeek`) — otherwise a
