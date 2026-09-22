@@ -1845,7 +1845,6 @@ function renderTop(){
      <div class="row">
        <div class="house"><span class="dot">🏠</span>${esc(S.house)}</div>
        <div class="tools">
-         <button class="icbtn" onclick="go('debts')" title="${t('moneyowe')}">💳</button>
          <button class="icbtn" onclick="openActivity()" title="${t('activity')}">🔔</button>
          <button class="icbtn" id="cloudBtn" onclick="openCloud()" title="${t('cloud')}">${cloud.on?'✅':'☁️'}</button>
          <button class="icbtn" onclick="setLang('${S.lang==='si'?'en':'si'}')">${S.lang==='si'?'EN':'සිං'}</button>
@@ -1933,24 +1932,24 @@ function viewHome(){
   // join it too, marked as such by personalRow.
   const feed=[...S.expenses,...myPersonal().map(x=>Object.assign({},x,{_personal:true}))];
   const recent=feed.sort((a,b)=>b.date-a.date).slice(0,6);
+  const meId0=getMeId();
+  const myList=meId0?allDebts().filter(d=>d.owner===meId0):allDebts();
+  const owe=myList.reduce((a,d)=>a+debtRemaining(d),0);
+  const over=myList.some(debtOverdue);
   let h=`<div class="stg">
     <div class="stats">
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
-    </div>
-    <button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;
+    </div>`;
+  if(owe>0||myList.length){
+    h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:0;margin-bottom:14px" onclick="go('debts')">
+      💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
+  }
+  h+=`<button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;
   h+=`<button class="addbtn coral" style="margin-top:0;margin-bottom:20px" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   h+=`<div class="sec-title">${t('recent')} ${S.expenses.length>6?`<span class="link" onclick="go('hist')">${t('all')} →</span>`:''}</div>`;
   if(!recent.length){h+=`<div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div>`;}
   else{h+=`<div class="card">${recent.map(e=>e._personal?personalRow(e):expRow(e)).join('')}</div>`;}
-  const meId0=getMeId();
-  const myList=meId0?allDebts().filter(d=>d.owner===meId0):allDebts();
-  const owe=myList.reduce((a,d)=>a+debtRemaining(d),0);
-  if(owe>0||myList.length){
-    const over=myList.some(debtOverdue);
-    h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:11px" onclick="go('debts')">
-      💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
-  }
   h+=`</div>`;
   return h;
 }
