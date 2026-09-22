@@ -120,7 +120,29 @@ const fs = require('fs');
           await page.textContent('.budget'));
   await page.evaluate(() => setMyBudget(0));
 
-  s.section('8. editing and deleting');
+  s.section('8. a weekly budget is a separate target, not the monthly one');
+  await page.evaluate(() => { setMyBudget(4000, 'week'); setMyBudget(20000); });
+  await page.waitForTimeout(150);
+  s.check('the weekly target is its own number', await page.evaluate(() => myBudget('week')) === 4000);
+  s.check('setting it left the monthly one alone', await page.evaluate(() => myBudget()) === 20000);
+  await page.evaluate(() => { reportPeriod = 'week'; drawView(); });
+  await page.waitForTimeout(300);
+  const wkSpent = await page.evaluate(() => {
+    const meId = getMeId();
+    return Math.round(consumedByMember(periodExpenses('week'), S.members)[meId] || 0) + personalTotal('week');
+  });
+  s.check('the card switches to the weekly figure when Week is selected',
+          (await page.textContent('.budget')).includes(wkSpent.toLocaleString('en-US')) &&
+          (await page.textContent('.budget')).includes((4000).toLocaleString('en-US')),
+          await page.textContent('.budget'));
+  await page.evaluate(() => { reportPeriod = 'month'; drawView(); });
+  await page.waitForTimeout(300);
+  s.check('and back to the monthly one when Month is selected again',
+          (await page.textContent('.budget')).includes((20000).toLocaleString('en-US')),
+          await page.textContent('.budget'));
+  await page.evaluate(() => { setMyBudget(0); setMyBudget(0, 'week'); });
+
+  s.section('9. editing and deleting');
   await page.evaluate(() => { drawView(); });
   await page.waitForTimeout(300);
   await page.click('.exp');
@@ -137,7 +159,7 @@ const fs = require('fs');
   await page.evaluate(() => { setMyPersonal([{ id: 'p1', desc: 'Haircut', amount: 800, date: Date.now() }]); drawView(); });
   await page.waitForTimeout(300);
 
-  s.section('9. Mine needs an identity, and says so by falling back');
+  s.section('10. Mine needs an identity, and says so by falling back');
   await page.evaluate(() => { setMeId(null); reportScope = 'mine'; drawView(); });
   await page.waitForTimeout(350);
   s.check('it drops back to House rather than showing nothing',
@@ -145,20 +167,27 @@ const fs = require('fs');
   await page.evaluate(() => { setMeId(S.members[0].id); reportScope = 'mine'; drawView(); });
   await page.waitForTimeout(350);
 
-  s.section('10. the backup carries them, so a reinstall does not lose them');
+  s.section('11. the backup carries them, so a reinstall does not lose them');
+  await page.evaluate(() => { setMyBudget(15000); setMyBudget(3500, 'week'); });
   const dl = page.waitForEvent('download', { timeout: 8000 });
   await page.evaluate(() => exportBackup());
   const file = JSON.parse(fs.readFileSync(await (await dl).path(), 'utf8'));
   s.check('personal entries are in the backup', Array.isArray(file.personal) && file.personal.length === 1, file.personal);
   s.check('still no plaintext password in it', file.pass === undefined && !!file.passHash);
+  s.check('both budgets are in the backup', file.budget === 15000 && file.budgetWeek === 3500, file);
   const restored = await page.evaluate(f => {
     setMyPersonal([]);                       // simulate a wiped device
+    setMyBudget(0); setMyBudget(0, 'week');
     if (Array.isArray(f.personal)) setMyPersonal(f.personal);
-    return myPersonal().length;
+    if (f.budget) setMyBudget(f.budget);
+    if (f.budgetWeek) setMyBudget(f.budgetWeek, 'week');
+    return { personal: myPersonal().length, month: myBudget(), week: myBudget('week') };
   }, file);
-  s.check('and restore brings them back', restored === 1, restored);
+  s.check('and restore brings them back', restored.personal === 1, restored);
+  s.check('both budgets are restored too', restored.month === 15000 && restored.week === 3500, restored);
+  await page.evaluate(() => { setMyBudget(0); setMyBudget(0, 'week'); });
 
-  s.section('11. the CSV follows the scope');
+  s.section('12. the CSV follows the scope');
   const mineCsv = await page.evaluate(() => buildMineCsv('month'));
   const lines = mineCsv.split('\r\n');
   s.check('it names the kind of each row', lines[0].includes('Kind'), lines[0]);

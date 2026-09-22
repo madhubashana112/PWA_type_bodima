@@ -134,7 +134,7 @@ These are deliberately outside `S` and never sync.
 | Key | |
 |---|---|
 | `bodime_me` | which member this device is, for "you owe" framing |
-| `bodime_budget_v1` | a private monthly budget, per identity |
+| `bodime_budget_v1` | a private budget per identity — a monthly and a weekly target, kept separately |
 | `bodime_personal_v1` | personal expenses, per identity |
 | `bodime_lang` | language chosen before logging in |
 | `bodime_fb_cfg` | a user-supplied Firebase config, when none is built in |
