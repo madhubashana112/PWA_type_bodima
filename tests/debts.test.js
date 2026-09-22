@@ -158,8 +158,7 @@ async function overlaps(page, a, bSel) {
           created && created.ownerName === (await page.evaluate(id => S.members.find(m => m.id === id).name, otherId)));
 
   s.section('7. reachable from Home, above Report, not from the top bar');
-  // otherId owns every debt in this suite by now; pick the identity that
-  // actually has one, or the button has nothing to show and never renders.
+  // otherId owns every debt in this suite by now.
   await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, otherId);
   await page.waitForTimeout(350);
   s.check('no icon for it in the top bar',
@@ -173,6 +172,23 @@ async function overlaps(page, a, bSel) {
   await page.click('.stg .addbtn:not(.coral)');
   await page.waitForTimeout(300);
   s.check('tapping it opens the debts list', await page.evaluate(() => view === 'debts'));
+
+  s.section('8. still there with nothing owed — the only way in, since the icon is gone');
+  const meWithNone = await page.evaluate(() => S.members[0].id);   // owns none of the debts above
+  await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, meWithNone);
+  await page.waitForTimeout(350);
+  s.check('the button is still on the screen',
+          await page.evaluate(() => Array.from(document.querySelectorAll('.stg .addbtn')).some(b => b.textContent.includes('💳'))));
+  const oweBtnText = await page.evaluate(() =>
+    (Array.from(document.querySelectorAll('.stg .addbtn')).find(b => b.textContent.includes('💳')) || {}).textContent || '');
+  s.check('it reads Rs.0 rather than disappearing', /0/.test(oweBtnText), oweBtnText);
+  await page.click('.stg .addbtn:not(.coral)');
+  await page.waitForTimeout(300);
+  s.check('and it still opens the debts screen', await page.evaluate(() => view === 'debts'));
+  await page.click('.smode button:nth-child(2)');   // "Just me" — this identity owns none
+  await page.waitForTimeout(300);
+  s.check('filtered to mine, it is properly empty rather than crashing',
+          await page.evaluate(() => !!document.querySelector('.empty')));
 
   await ctx.close();
   await b.close();
