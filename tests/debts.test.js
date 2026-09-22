@@ -110,6 +110,53 @@ async function overlaps(page, a, bSel) {
   });
   s.check('no unexpected collisions', clash.length === 0, clash);
 
+  s.section('5. picking who a debt belongs to, rather than guessing from identity');
+  // The bug this repairs: a debt added on a device with no identity chosen
+  // baked the localised word for "someone" into ownerName forever, and no
+  // amount of setting up identity afterwards could ever fix it because
+  // debtOwnerName trusted whatever was stored over a live member lookup.
+  await page.evaluate(() => {
+    S.debts.push({ id: 'ghost1', owner: 'nobody', ownerName: 'Someone',
+                   person: 'Shaminda', total: 5000, reason: '', date: Date.now(),
+                   due: null, payments: [] });
+    save(); drawView();
+  });
+  await page.waitForTimeout(300);
+  s.check('an unresolvable owner still shows the placeholder, not a wrong name',
+          await page.evaluate(() => debtOwnerName(debtById('ghost1'))) === 'Someone');
+
+  await page.evaluate(() => openDebtForm('ghost1'));
+  await page.waitForTimeout(400);
+  s.check('the picker is there', await page.evaluate(() => document.querySelectorAll('#d_owner .payer').length) === 2);
+  s.check('an unresolvable owner starts with nobody selected',
+          await page.evaluate(() => !document.querySelector('#d_owner .payer.on')));
+  const fixTo = await page.evaluate(() => S.members[1].id);
+  await page.evaluate(id => { debtDraft.owner = id; renderDebtOwner(); }, fixTo);
+  await page.click('#sheet .addbtn.coral');
+  await page.waitForTimeout(400);
+  s.check('the real name replaces the placeholder',
+          await page.evaluate(() => debtOwnerName(debtById('ghost1'))) === await page.evaluate(id => S.members.find(m => m.id === id).name, fixTo));
+  s.check('the owner id was actually reassigned, not just the label',
+          (await page.evaluate(() => debtById('ghost1').owner)) === fixTo);
+
+  s.section('6. a new debt defaults to whoever this device is, and that is pickable');
+  await page.evaluate(() => setMeId(S.members[0].id));
+  await page.evaluate(() => openDebtForm());
+  await page.waitForTimeout(400);
+  s.check('it defaults to the current identity',
+          await page.evaluate(id => debtDraft.owner === id, await page.evaluate(() => S.members[0].id)));
+  const otherId = await page.evaluate(() => S.members[1].id);
+  await page.evaluate(id => { debtDraft.owner = id; renderDebtOwner(); }, otherId);
+  await page.fill('#d_person', 'Landlord');
+  await page.fill('#d_total', '750');
+  await page.click('#sheet .addbtn.coral');
+  await page.waitForTimeout(400);
+  const created = await page.evaluate(() => allDebts().find(d => d.person === 'Landlord'));
+  s.check('the debt is owned by whoever was picked, not just the device identity',
+          created && created.owner === otherId, created);
+  s.check('and that name is what shows',
+          created && created.ownerName === (await page.evaluate(id => S.members.find(m => m.id === id).name, otherId)));
+
   await ctx.close();
   await b.close();
   s.finish();

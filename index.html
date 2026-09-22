@@ -861,7 +861,15 @@ function debtRemaining(d){return Math.max(0,Math.round((Number(d.total)||0)-debt
 function debtStatus(d){const rem=debtRemaining(d);if(rem<=0)return 'paid';return debtPaid(d)>0?'partial':'pending';}
 function debtOverdue(d){return d.due && debtRemaining(d)>0 && (new Date(d.due).setHours(23,59,59,999) < Date.now());}
 function debtById(id){return allDebts().find(d=>d.id===id)||null;}
-function debtOwnerName(d){if(d.ownerName)return d.ownerName;const m=d.owner&&S.members.find(x=>x.id===d.owner);return m?m.name:t('someone');}
+function debtOwnerName(d){
+  const m=d.owner&&S.members.find(x=>x.id===d.owner);
+  if(m)return m.name;                 // the member list is the source of truth, not what got saved once
+  // A record saved before an owner could be picked baked in whichever
+  // language's word for "someone" was active at the time — never trust
+  // that as if it were a real name.
+  const placeholder=d.ownerName===L.si.someone||d.ownerName===L.en.someone;
+  return d.ownerName&&!placeholder?d.ownerName:t('someone');
+}
 function save(){
   noteDeletions();                 // record anything that just went away
   localStorage.setItem(KEY,JSON.stringify(S));
@@ -1301,13 +1309,13 @@ const L={
   notif:'දැනුම්දීම්',notifon:'දැනුම්දීම් ලබාගන්න',justnow:'දැන්',minago:'මිනිත්තු',hrago:'පැය',dayago:'දවස්',ago:'කට කලින්',
   moneyowe:'මම ණයයි',moneyoweSub:'ඔයා අනිත් අයට ගෙවන්න තියෙන ණය — පෞද්ගලිකයි (cloud එකට යන්නේ නෑ)',
   totalowe:'මුළු ණය',oweto:'ට ගෙවන්න',adddebt:'ණයක් එකතු කරන්න',editdebt:'ණය වෙනස් කරන්න',
-  person:'කාටද ණය?',personph:'නම දාන්න (උදා: Nimal)',totalowed:'මුළු ණය මුදල',reason:'හේතුව / විස්තරය',
+  whoowes:'මේකට ණයයි කවුද?',person:'කාටද ණය?',personph:'නම දාන්න (උදා: Nimal)',totalowed:'මුළු ණය මුදල',reason:'හේතුව / විස්තරය',
   reasonph:'උදා: කඩේ ණය, ණයට ගත්ත සල්ලි',txdate:'ගත්ත දිනය',duedate:'ගෙවිය යුතු දිනය (optional)',nodue:'දිනයක් නෑ',
   st_pending:'ගෙවලා නෑ',st_partial:'ටිකක් ගෙවලා',st_paid:'ගෙවලා ඉවරයි',overdue:'කල් ඉකුත්',due:'ගෙවිය යුතුයි',
   paid_:'ගෙව්වා',remaining_:'ඉතුරු',addpay:'ගෙවීමක් එකතු කරන්න',payamt:'ගෙව්ව මුදල',payhist:'ගෙවීම් ඉතිහාසය',
   nopay:'තවම ගෙවීමක් නෑ',markpaid:'ගෙවලා ඉවර කරන්න',markpaidconf:'මේ ණය සම්පූර්ණයෙන් ගෙවලා කියලා සලකුණු කරන්නද?',
   deldebt:'මේ ණය record එක අයින් කරන්නද?',nodebts:'තවම ණයක් නෑ',nodebtsS:'පහළ බොත්තමෙන් ණයක් එකතු කරන්න',
-  needname2:'කාටද ණය කියලා නම දාන්න',needamt:'වලංගු මුදලක් දාන්න',payover:'ඉතුරු මුදලට වඩා වැඩියි',debtsettled:'ණය ගෙවලා ඉවරයි 🎉',
+  needowner:'මේකට ණයයි කවුද කියලා තෝරන්න',needname2:'කාටද ණය කියලා නම දාන්න',needamt:'වලංගු මුදලක් දාන්න',payover:'ඉතුරු මුදලට වඩා වැඩියි',debtsettled:'ණය ගෙවලා ඉවරයි 🎉',
   paidon:'ගෙව්වා',allsettled2:'ණය ඔක්කොම ගෙවලා ඉවරයි 🎉',people2:'දෙනෙක්',someone:'කවුරුහරි',
   owesTo:'ට',debtby:'ණය',mine:'මගේ',alld:'ඔක්කොම',groupowe:'කට්ටියේ මුළු ණය',ionly:'මම විතරයි',iowe2:'මම ණයයි',
   splitmode:'බෙදන විදිහ',eq:'සමානව',exact:'මුදල් වෙන වෙනම',shares:'කොටස් අනුව',
@@ -1375,13 +1383,13 @@ const L={
   notif:'Notifications',notifon:'Turn on notifications',justnow:'just now',minago:'min',hrago:'h',dayago:'d',ago:'ago',
   moneyowe:'Money I Owe',moneyoweSub:'Debts you owe other people — private to you (never synced)',
   totalowe:'Total I owe',oweto:'owe',adddebt:'Add a debt',editdebt:'Edit debt',
-  person:'Who do you owe?',personph:'Name (e.g. Nimal)',totalowed:'Total amount owed',reason:'Reason / note',
+  whoowes:'Who owes this?',person:'Who do you owe?',personph:'Name (e.g. Nimal)',totalowed:'Total amount owed',reason:'Reason / note',
   reasonph:'e.g. shop credit, borrowed cash',txdate:'Date taken',duedate:'Due date (optional)',nodue:'No date',
   st_pending:'Pending',st_partial:'Partially paid',st_paid:'Fully paid',overdue:'Overdue',due:'due',
   paid_:'Paid',remaining_:'Remaining',addpay:'Add a payment',payamt:'Amount paid',payhist:'Payment history',
   nopay:'No payments yet',markpaid:'Mark fully paid',markpaidconf:'Mark this debt as fully paid?',
   deldebt:'Delete this debt record?',nodebts:'No debts yet',nodebtsS:'Tap the button below to add one',
-  needname2:'Enter who you owe',needamt:'Enter a valid amount',payover:'More than the remaining balance',debtsettled:'Debt fully settled 🎉',
+  needowner:'Pick who this debt belongs to',needname2:'Enter who you owe',needamt:'Enter a valid amount',payover:'More than the remaining balance',debtsettled:'Debt fully settled 🎉',
   paidon:'paid',allsettled2:'All debts settled 🎉',people2:'people',someone:'Someone',
   owesTo:'→',debtby:'owes',mine:'Mine',alld:'All',groupowe:'Group total owed',ionly:'Just me',iowe2:'I owe',
   splitmode:'Split',eq:'Equally',exact:'Exact amounts',shares:'By shares',
@@ -2869,9 +2877,14 @@ function openDebt(id){
 let debtDraft={editId:null};
 function openDebtForm(editId){
   const d=editId?debtById(editId):null;
-  debtDraft={editId:editId||null};
+  // Whoever this device is logged in as is the natural default, but the
+  // debt can belong to anyone in the house — it has to be pickable, or a
+  // device with no identity set bakes in a placeholder that can never be
+  // fixed just by choosing an identity later.
+  debtDraft={editId:editId||null,owner:d?d.owner:(getMeId()||'')};
   const today=ymd(Date.now());
   let body=`
+   <div class="f"><label>${t('whoowes')}</label><div class="chips" id="d_owner"></div></div>
    <div class="f"><label>${t('person')}</label>
      <input class="in" id="d_person" placeholder="${t('personph')}" autocomplete="off" value="${d?esc(d.person):''}"></div>
    <div class="f"><label>${t('totalowed')}</label>
@@ -2885,7 +2898,12 @@ function openDebtForm(editId){
      <input class="in" type="date" id="d_due" value="${d&&d.due?ymd(d.due):''}"></div>
    <button class="addbtn coral" onclick="saveDebt()">${d?t('update'):t('adddebt')}</button>`;
   sheet(d?t('editdebt'):t('adddebt'),body);
+  renderDebtOwner();
   if(!d)setTimeout(()=>{const f=document.getElementById('d_person');if(f)f.focus();},320);
+}
+function renderDebtOwner(){
+  const c=document.getElementById('d_owner');if(!c)return;
+  c.innerHTML=S.members.map(m=>`<button class="payer ${debtDraft.owner===m.id?'on':''}" onclick="debtDraft.owner='${m.id}';renderDebtOwner();">${avHtml(m,'av-sm')}${esc(m.name)}</button>`).join('');
 }
 function saveDebt(){
   const person=document.getElementById('d_person').value.trim();
@@ -2893,6 +2911,9 @@ function saveDebt(){
   const reason=document.getElementById('d_reason').value.trim();
   const dateStr=document.getElementById('d_date').value;
   const dueStr=document.getElementById('d_due').value;
+  if(!debtDraft.owner){toast(t('needowner'));return;}
+  const ownerM=S.members.find(m=>m.id===debtDraft.owner);
+  if(!ownerM){toast(t('needowner'));return;}
   if(!person){toast(t('needname2'));return;}
   if(isNaN(total)||total<=0){toast(t('needamt'));return;}
   const date=fromYmd(dateStr)||Date.now();
@@ -2900,10 +2921,9 @@ function saveDebt(){
   const list=allDebts();
   if(debtDraft.editId){
     const d=list.find(x=>x.id===debtDraft.editId);
-    if(d){d.person=person;d.total=Math.round(total);d.reason=reason;d.date=date;d.due=due;}
+    if(d){d.owner=ownerM.id;d.ownerName=ownerM.name;d.person=person;d.total=Math.round(total);d.reason=reason;d.date=date;d.due=due;}
   }else{
-    const meId=getMeId();const meM=me();
-    list.unshift({id:uid(),owner:meId||'',ownerName:meM?meM.name:t('someone'),person,total:Math.round(total),reason,date,due,payments:[]});
+    list.unshift({id:uid(),owner:ownerM.id,ownerName:ownerM.name,person,total:Math.round(total),reason,date,due,payments:[]});
   }
   setDebts(list);closeSheet();toast(t('saved'));drawView();
 }
