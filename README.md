@@ -25,8 +25,9 @@ is no build step, no bundler and no server to run.
 - **Personal expenses** — what you spent on yourself, kept on your phone and
   never synced to the house, counted in your own report and budget, and
   mixed into Home's recent-activity feed (marked as personal) so it isn't
-  only visible from the report. Home also carries its own copy of the
-  monthly budget card, so tracking it doesn't need a trip to Reports either.
+  only visible from the report. Home's stats also carry a compact "My
+  spending" tile — this month's share of the house plus your own personal
+  entries, at a glance without a trip to Reports.
 - **Month close** that files everything into an archive and starts fresh;
   a closed month can be deleted again, with a confirmation.
 - **Deletions that stay deleted** — what one phone removes is removed for
