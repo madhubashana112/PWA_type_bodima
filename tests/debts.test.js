@@ -157,19 +157,22 @@ async function overlaps(page, a, bSel) {
   s.check('and that name is what shows',
           created && created.ownerName === (await page.evaluate(id => S.members.find(m => m.id === id).name, otherId)));
 
-  s.section('7. reachable from Home, above Report, not from the top bar');
+  s.section('7. reachable from Home as a compact tile, not from the top bar');
   // otherId owns every debt in this suite by now.
   await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, otherId);
   await page.waitForTimeout(350);
   s.check('no icon for it in the top bar',
           !(await page.evaluate(() => Array.from(document.querySelectorAll('.tools .icbtn')).some(b => b.textContent.includes('💳')))));
-  const order = await page.evaluate(() => {
+  const tileInfo = await page.evaluate(() => {
     const kids = Array.from(document.querySelector('.stg').children);
-    return { owe: kids.findIndex(el => el.textContent.includes('💳')),
-             report: kids.findIndex(el => el.classList.contains('reportbtn')) };
+    const statsIdx = kids.findIndex(el => el.classList.contains('stats'));
+    const reportIdx = kids.findIndex(el => el.classList.contains('reportbtn'));
+    const tile = Array.from(document.querySelectorAll('.stats .stat')).find(el => el.textContent.includes('💳'));
+    return { statsIdx, reportIdx, tileText: tile ? tile.textContent : null };
   });
-  s.check('the money-owed button sits above Report', order.owe !== -1 && order.owe < order.report, order);
-  await page.click('.stg .addbtn:not(.coral)');
+  s.check('it sits in the stats grid, above Report', tileInfo.tileText !== null && tileInfo.statsIdx < tileInfo.reportIdx, tileInfo);
+  s.check('it names Money I Owe', /Money I Owe|ණයයි/.test(tileInfo.tileText), tileInfo.tileText);
+  await page.evaluate(() => Array.from(document.querySelectorAll('.stats .stat')).find(el => el.textContent.includes('💳')).click());
   await page.waitForTimeout(300);
   s.check('tapping it opens the debts list', await page.evaluate(() => view === 'debts'));
 
@@ -177,12 +180,11 @@ async function overlaps(page, a, bSel) {
   const meWithNone = await page.evaluate(() => S.members[0].id);   // owns none of the debts above
   await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, meWithNone);
   await page.waitForTimeout(350);
-  s.check('the button is still on the screen',
-          await page.evaluate(() => Array.from(document.querySelectorAll('.stg .addbtn')).some(b => b.textContent.includes('💳'))));
-  const oweBtnText = await page.evaluate(() =>
-    (Array.from(document.querySelectorAll('.stg .addbtn')).find(b => b.textContent.includes('💳')) || {}).textContent || '');
-  s.check('it reads Rs.0 rather than disappearing', /0/.test(oweBtnText), oweBtnText);
-  await page.click('.stg .addbtn:not(.coral)');
+  const oweTileText = await page.evaluate(() =>
+    (Array.from(document.querySelectorAll('.stats .stat')).find(el => el.textContent.includes('💳')) || {}).textContent || '');
+  s.check('the tile is still on the screen', oweTileText !== '', oweTileText);
+  s.check('it reads Rs.0 rather than disappearing', /0/.test(oweTileText), oweTileText);
+  await page.evaluate(() => Array.from(document.querySelectorAll('.stats .stat')).find(el => el.textContent.includes('💳')).click());
   await page.waitForTimeout(300);
   s.check('and it still opens the debts screen', await page.evaluate(() => view === 'debts'));
   await page.click('.smode button:nth-child(2)');   // "Just me" — this identity owns none

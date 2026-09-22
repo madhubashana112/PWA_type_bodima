@@ -249,20 +249,25 @@ const fs = require('fs');
   const expectedMySpend = await page.evaluate(() => myShareOf(periodExpenses('month')) + personalTotal('month'));
   const tileTexts = await page.evaluate(() => Array.from(document.querySelectorAll('.stats .stat')).map(el => el.textContent));
   s.check('a third, compact tile carries the figure — same one Report calls "My spending"',
-          tileTexts.length === 3 && tileTexts[2].includes(expectedMySpend.toLocaleString('en-US')) && /spending|වියදම/i.test(tileTexts[2]),
+          tileTexts.length === 4 && tileTexts[2].includes(expectedMySpend.toLocaleString('en-US')) && /spending|වියදම/i.test(tileTexts[2]),
           [tileTexts, expectedMySpend]);
-  s.check('it sits inside the same small stat grid as the other two, not a big card of its own',
+  s.check('and a fourth carries Money I Owe, filling the row out',
+          /Money I Owe|ණයයි/.test(tileTexts[3]), tileTexts);
+  s.check('it sits inside the same small stat grid as the others, not a big card of its own',
           await page.evaluate(() => document.querySelectorAll('.stats').length) === 1);
   // Report's own copy of the budget card is untouched — only Home dropped it.
   await page.evaluate(() => { view = 'report'; reportScope = 'mine'; reportPeriod = 'month'; drawView(); });
   await page.waitForTimeout(350);
   s.check('Report still has its budget card', await page.evaluate(() => !!document.querySelector('.budget')));
 
-  s.section('17. and it disappears along with everything else identity-only, with no identity');
+  s.section('17. My spending drops out along with everything else identity-only; Money I Owe does not');
   await page.evaluate(() => { setMeId(null); view = 'home'; drawView(); });
   await page.waitForTimeout(350);
-  s.check('no third tile without an identity to spend as',
-          (await page.evaluate(() => document.querySelectorAll('.stats .stat').length)) === 2);
+  const noIdTiles = await page.evaluate(() => Array.from(document.querySelectorAll('.stats .stat')).map(el => el.textContent));
+  s.check('no My-spending tile without an identity to spend as',
+          noIdTiles.length === 3 && !/spending|වියදම/i.test(noIdTiles.join('')), noIdTiles);
+  s.check('Money I Owe stays, since it does not need one',
+          /Money I Owe|ණයයි/.test(noIdTiles[2]), noIdTiles);
   await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, await page.evaluate(() => S.members[0].id));
 
   s.section('18. Add expense leads on Home, above the stats');
