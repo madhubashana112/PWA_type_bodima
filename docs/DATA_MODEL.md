@@ -156,13 +156,21 @@ see each other's:
 
 They are deliberately not in `S`, so they never reach the cloud and never
 appear in the house's totals, history or balances. They do count towards the
-report's **Mine** scope and towards the monthly budget, which is what "my
-monthly spending" was always meant to be.
+report's **Mine** scope and towards whichever budget (monthly or weekly)
+matches the period being looked at, which is what "my spending" was always
+meant to be.
+
+Home's recent-activity card also mixes this device's own personal entries in
+with `S.expenses` for display, newest first — the two house-wide tiles above
+it stay computed from `S.expenses` alone. This is display only: nothing
+about what is in `S`, the cloud, or another device's view of Home changes,
+and a device signed in as someone else sees only its own identity's entries
+there, same as everywhere else personal expenses appear.
 
 Because they live outside `S`, the JSON backup carries them explicitly under
-`personal` (and the budget under `budget`) — otherwise a reinstall would lose
-them. That does mean the backup file contains private entries, which the
-backup sheet warns about before you export.
+`personal` (and the budgets under `budget` and `budgetWeek`) — otherwise a
+reinstall would lose them. That does mean the backup file contains private
+entries, which the backup sheet warns about before you export.
 
 `mineAsExpenses(period)` is what the Mine scope charts: one row per house
 expense holding only your share, plus your personal entries at face value. It
