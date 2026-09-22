@@ -18,9 +18,10 @@ is no build step, no bundler and no server to run.
 - **"Money I owe"** — debts to people outside the house, with part payments
   and due dates, shared with the rest of the house.
 - **Reports** by day, week or month, with a where-it-went donut, a per-person
-  spend chart, a trend, a private personal budget, and CSV export for a
-  spreadsheet. A House / Mine switch shows either the whole house's figures
-  or just your own.
+  spend chart, a trend, a private personal budget — a monthly and a weekly
+  target, tracked separately, whichever the report is showing — and CSV
+  export for a spreadsheet. A House / Mine switch shows either the whole
+  house's figures or just your own.
 - **Personal expenses** — what you spent on yourself, kept on your phone and
   never synced to the house, counted in your own report and budget.
 - **Month close** that files everything into an archive and starts fresh;

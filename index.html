@@ -794,8 +794,16 @@ function privateOwner(){return getMeId()||'_local';}
 
 const BUDGET_KEY='bodime_budget_v1';
 function loadBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY)||'{}')||{};}catch(e){return {};}}
-function myBudget(){const o=loadBudgets()[privateOwner()];return o&&o.monthly?Math.round(o.monthly):0;}
-function setMyBudget(amt){const s=loadBudgets();s[privateOwner()]={monthly:Math.round(amt)||0};try{localStorage.setItem(BUDGET_KEY,JSON.stringify(s));}catch(e){}}
+// A monthly and a weekly target are kept side by side per identity, so
+// setting one never clobbers the other.
+function myBudget(period){const o=loadBudgets()[privateOwner()];const k=period==='week'?'weekly':'monthly';return o&&o[k]?Math.round(o[k]):0;}
+function setMyBudget(amt,period){
+  const s=loadBudgets();const k=period==='week'?'weekly':'monthly';
+  const cur=Object.assign({},s[privateOwner()]);
+  cur[k]=Math.round(amt)||0;
+  s[privateOwner()]=cur;
+  try{localStorage.setItem(BUDGET_KEY,JSON.stringify(s));}catch(e){}
+}
 
 /* ---- personal expenses ----
    Things you spent on yourself: a haircut, your own lunch, clothes. They are
@@ -1282,11 +1290,12 @@ const L={
   totexp:'වියදම් ගණන',avgper:'එක්කෙනෙකුට සාමා.',expn:'වියදම්',
   rep_day:'අද',rep_week:'සතිය',rep_month:'මාසය',daytrend:'දවස් 7ක වියදම්',weektrend:'සති 6ක වියදම්',
   noperiod:'මේ කාලයට වියදමක් නෑ',
-  mybudget:'මගේ මාසික Budget',setbudget:'Budget එකක් දාන්න',editbudget:'Budget එක වෙනස් කරන්න',budgetamt:'මාසික Budget මුදල',
+  mybudget:'මගේ මාසික Budget',mybudgetw:'මගේ සතිපතා Budget',setbudget:'Budget එකක් දාන්න',editbudget:'Budget එක වෙනස් කරන්න',budgetamt:'මාසික Budget මුදල',budgetamtw:'සතිපතා Budget මුදල',
   budgetph:'උදා: 15000',budgetprivate:'මේක ඔයාට විතරයි — cloud එකට යන්නේ නෑ',budgetleft:'ඉතුරු',budgetover:'Budget එක ඉක්මවලා',
-  budgetused:'පාවිච්චි කළා',budgetsaved:'Budget එක save කළා ✓',ofbudget:'න්',nobudget:'Budget එකක් දාලා ඔයාගේ මාසික වියදම බලාගන්න',
+  budgetused:'පාවිච්චි කළා',budgetsaved:'Budget එක save කළා ✓',ofbudget:'න්',nobudget:'Budget එකක් දාලා ඔයාගේ මාසික වියදම බලාගන්න',nobudgetw:'Budget එකක් දාලා ඔයාගේ සතියේ වියදම බලාගන්න',
   budgetnew:'{who}, ඔයාගේ මාසික budget එක {amt} විදිහට දැම්මා ✓',budgetupd:'ඔයාගේ මාසික budget එක {amt} විදිහට වෙනස් කළා ✓',
-  mymonth:'මේ මාසේ මගේ වියදම',remove:'අයින් කරන්න',
+  budgetneww:'{who}, ඔයාගේ සතිපතා budget එක {amt} විදිහට දැම්මා ✓',budgetupdw:'ඔයාගේ සතිපතා budget එක {amt} විදිහට වෙනස් කළා ✓',
+  mymonth:'මේ මාසේ මගේ වියදම',myweek:'මේ සතියේ මගේ වියදම',remove:'අයින් කරන්න',
   closemonth:'මාසය වහන්න',closeconf:'මේ කාලයේ වියදම් සේරම වසා දාලා, ශේෂයන් 0 කරලා අලුත් මාසෙට පටන් ගන්නවද? (වාර්තාව තියාගන්නවා)',
   yesclose:'ඔව්, වහන්න',closed:'මාසය වහලා දැම්මා ✓',nothing2close:'වහන්න වියදම් නෑ',pastmonths:'වසා දැමූ මාස',
   cloud:'Cloud Sync',cloudon:'Sync ක්‍රියාත්මකයි',cloudoff:'මේ phone එකේ විතරයි',cloudsynced:'Cloud එකට sync වෙලා ✅',syncpaused:'Sync නැහැ — මේ phone එකේ විතරයි. අනිත් අයට පේන්නේ නෑ.',reconnect:'Connect',retry:'ආයෙත් try කරන්න',syncdenied:'Database එක access කරන්න දෙන්නේ නෑ — rules බලන්න',synctimeout:'Connection එක හම්බුනේ නෑ',cloudsyncing:'Sync වෙනවා…',cloudback:'ආයෙත් online',waiting:'බලාගෙන',
@@ -1356,11 +1365,12 @@ const L={
   totexp:'Expenses',avgper:'Avg / person',expn:'expenses',
   rep_day:'Today',rep_week:'Week',rep_month:'Month',daytrend:'Last 7 days',weektrend:'Last 6 weeks',
   noperiod:'No expenses in this period',
-  mybudget:'My monthly budget',setbudget:'Set a budget',editbudget:'Edit budget',budgetamt:'Monthly budget amount',
+  mybudget:'My monthly budget',mybudgetw:'My weekly budget',setbudget:'Set a budget',editbudget:'Edit budget',budgetamt:'Monthly budget amount',budgetamtw:'Weekly budget amount',
   budgetph:'e.g. 15000',budgetprivate:'Private to you — never synced',budgetleft:'left',budgetover:'Over budget',
-  budgetused:'used',budgetsaved:'Budget saved ✓',ofbudget:'of',nobudget:'Set a budget to track your monthly spending',
+  budgetused:'used',budgetsaved:'Budget saved ✓',ofbudget:'of',nobudget:'Set a budget to track your monthly spending',nobudgetw:'Set a budget to track your weekly spending',
   budgetnew:'{who}, your monthly budget is set to {amt} ✓',budgetupd:'Your monthly budget was updated to {amt} ✓',
-  mymonth:'My spend this month',remove:'Remove',
+  budgetneww:'{who}, your weekly budget is set to {amt} ✓',budgetupdw:'Your weekly budget was updated to {amt} ✓',
+  mymonth:'My spend this month',myweek:'My spend this week',remove:'Remove',
   closemonth:'Close month',closeconf:'Close all expenses for this period, reset balances to zero and start a fresh month? (The report is kept.)',
   yesclose:'Yes, close',closed:'Month closed ✓',nothing2close:'No expenses to close',pastmonths:'Closed months',
   cloud:'Cloud Sync',cloudon:'Sync is on',cloudoff:'This phone only',cloudsynced:'Synced to cloud ✅',syncpaused:'Not syncing — changes stay on this phone',reconnect:'Connect',retry:'Retry',syncdenied:'Database refused access — check the rules',synctimeout:'Could not reach the database',cloudsyncing:'Syncing…',cloudback:'Back online',waiting:'waiting',
@@ -2610,55 +2620,68 @@ function trendHtml(data){
       <div class="tlab">${esc(d.lab)}</div></div>`;
   }).join('')+`</div>`;
 }
+// A handful of budget strings differ between the monthly and weekly target;
+// everything else (amount label wording aside, "over", "used", "left"...) is
+// shared and read straight off t().
+function budgetLabel(period,key){
+  const wk={mybudget:'mybudgetw',budgetamt:'budgetamtw',nobudget:'nobudgetw',
+            budgetnew:'budgetneww',budgetupd:'budgetupdw',mymonth:'myweek'};
+  return t(period==='week'&&wk[key]?wk[key]:key);
+}
 function budgetCardHtml(){
   const meId=getMeId();
   if(!meId)return ''; // budget is personal; needs an identity
-  const budget=myBudget();
-  const monthExp=periodExpenses('month');
-  const spent=Math.round(consumedByMember(monthExp,S.members)[meId]||0)+personalTotal('month');
+  const period=reportPeriod==='week'?'week':'month';   // Today shares the month view
+  const budget=myBudget(period);
+  const exps=periodExpenses(period);
+  const spent=Math.round(consumedByMember(exps,S.members)[meId]||0)+personalTotal(period);
   if(!budget){
-    return `<div class="budget empty-b" onclick="openBudget()">
-      <div class="brow"><div><div class="blbl">${t('mybudget')}</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:230px">${t('nobudget')}</div></div>
+    return `<div class="budget empty-b" onclick="openBudget('${period}')">
+      <div class="brow"><div><div class="blbl">${budgetLabel(period,'mybudget')}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:230px">${budgetLabel(period,'nobudget')}</div></div>
         <div class="bedit" style="background:var(--ink);color:#fff">＋ ${t('setbudget')}</div></div></div>`;
   }
   const left=budget-spent;const pct=Math.min(100,Math.round(spent/budget*100));
   const over=left<0;
   return `<div class="budget ${over?'warn':''}">
     <div class="brow">
-      <div><div class="blbl">${t('mymonth')}</div>
+      <div><div class="blbl">${budgetLabel(period,'mymonth')}</div>
         <div class="bval">${fmt(spent)}</div>
         <div class="bof">${t('ofbudget')} ${fmt(budget)} · ${pct}% ${t('budgetused')}</div></div>
-      <div class="bedit" onclick="openBudget()">✏️ ${t('editbudget').split(' ')[0]}</div>
+      <div class="bedit" onclick="openBudget('${period}')">✏️ ${t('editbudget').split(' ')[0]}</div>
     </div>
     <div class="bbar"><i style="width:${Math.min(100,pct)}%"></i></div>
     <div class="bsub">${over?`⚠️ ${t('budgetover')} — ${fmt(-left)}`:`${fmt(left)} ${t('budgetleft')}`}</div></div>`;
 }
-function openBudget(){
-  const cur=myBudget();
+let budgetDraftPeriod='month';   // which target the open sheet is editing
+function openBudget(period){
+  budgetDraftPeriod=period==='week'?'week':'month';
+  const cur=myBudget(budgetDraftPeriod);
   let body=`<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px">🔒 ${t('budgetprivate')}</p>
-   <div class="f"><label>${t('budgetamt')}</label>
+   <div class="f"><label>${budgetLabel(budgetDraftPeriod,'budgetamt')}</label>
      <div class="amtwrap"><span class="cur">Rs.</span>
        <input class="in" id="bg_amt" inputmode="decimal" placeholder="${t('budgetph')}" autocomplete="off" value="${cur||''}" style="padding-left:42px;font-family:'Bricolage Grotesque';font-size:20px;font-weight:800"></div></div>
    <button class="addbtn coral" onclick="saveBudget()">${t('save')}</button>`;
   if(cur)body+=`<button class="addbtn" style="background:var(--red-sf);color:var(--red);margin-top:10px" onclick="clearBudget()">🗑 ${t('remove')}</button>`;
-  sheet('🎯 '+t('mybudget'),body);
+  sheet('🎯 '+budgetLabel(budgetDraftPeriod,'mybudget'),body);
   setTimeout(()=>{const f=document.getElementById('bg_amt');if(f)f.focus();},320);
 }
 function saveBudget(){
   const amt=evalAmt(document.getElementById('bg_amt').value);
   if(isNaN(amt)||amt<0){toast(t('needamt'));return;}
-  const isNew=!myBudget();
-  setMyBudget(amt);closeSheet();toast(t('budgetsaved'));
+  const period=budgetDraftPeriod;
+  const isNew=!myBudget(period);
+  setMyBudget(amt,period);closeSheet();toast(t('budgetsaved'));
   // notify the owner (private — this budget is not shared, so only they are told)
   if(amt>0){
     askNotifyPerm();
     const who=meName();
-    pushNotify('🎯 '+t('mybudget'), (isNew?t('budgetnew'):t('budgetupd')).replace('{amt}',fmt(amt)).replace('{who}',who));
+    pushNotify('🎯 '+budgetLabel(period,'mybudget'),
+               budgetLabel(period,isNew?'budgetnew':'budgetupd').replace('{amt}',fmt(amt)).replace('{who}',who));
   }
   drawView();
 }
-function clearBudget(){setMyBudget(0);closeSheet();toast(t('deleted'));drawView();}
+function clearBudget(){setMyBudget(0,budgetDraftPeriod);closeSheet();toast(t('deleted'));drawView();}
 let reportPeriod='month';   // 'day' | 'week' | 'month'
 function setReportPeriod(p){reportPeriod=p;catPick=null;drawView();}
 function viewReport(){
@@ -3174,7 +3197,7 @@ function exportBackup(){
     settles:S.settles,archives:S.archives,activity:S.activity||[],debts:S.debts||[],recurring:S.recurring||[],
     // Private to this device and not in S, so without this a reinstall would
     // lose them. It also means the file carries them — see bkSub.
-    personal:myPersonal(),budget:myBudget()};
+    personal:myPersonal(),budget:myBudget(),budgetWeek:myBudget('week')};
   const safe=(S.house||'bodime').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30)||'bodime';
   downloadFile(`bodime_${safe}_${csvDate(Date.now())}.json`,
                JSON.stringify(data,null,2),'application/json');
@@ -3198,6 +3221,7 @@ function importBackup(input){
       S.recurring=d.recurring||[];
       if(Array.isArray(d.personal))setMyPersonal(d.personal);
       if(d.budget)setMyBudget(d.budget);
+      if(d.budgetWeek)setMyBudget(d.budgetWeek,'week');
       S._auth=true;delete S._rupees;migrateWholeRupees(S);
       const cur=getMeId();if(cur&&!S.members.some(m=>m.id===cur))setMeId(null);
       save();toast(t('bkOk'));closeSheet();view='home';render();reconnectCloud();
