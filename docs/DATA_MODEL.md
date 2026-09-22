@@ -167,6 +167,12 @@ about what is in `S`, the cloud, or another device's view of Home changes,
 and a device signed in as someone else sees only its own identity's entries
 there, same as everywhere else personal expenses appear.
 
+`budgetCardHtml(period)` is shared between Home and Report rather than
+duplicated: Report calls it with no argument and it follows whichever period
+tab is selected there, while Home — which has no period tabs of its own —
+always passes `'month'` explicitly, so it shows a stable figure regardless
+of what Report was last left on.
+
 Because they live outside `S`, the JSON backup carries them explicitly under
 `personal` (and the budgets under `budget` and `budgetWeek`) — otherwise a
 reinstall would lose them. That does mean the backup file contains private
