@@ -25,6 +25,10 @@ is no build step, no bundler and no server to run.
   never synced to the house, counted in your own report and budget.
 - **Month close** that files everything into an archive and starts fresh;
   a closed month can be deleted again, with a confirmation.
+- **Deletions that stay deleted** — what one phone removes is removed for
+  everyone, and does not come back when a phone that was offline syncs again.
+- **Erase everything** in Settings → Backup: clears the house for the whole
+  group and wipes this device back to a fresh install.
 - **Search and filters** over the history by text, person and period.
 - **Offline** — the app opens and works with no connection; changes sync when
   it comes back.
@@ -124,6 +128,26 @@ In order:
    `houses/<name>` should read `{"moved": 1}`.
 4. Only then apply the rules.
 
+### Deleted things coming back
+
+They no longer do, and the reason is worth knowing. Syncing merges rather
+than replaces, and a merge cannot tell *"I have never seen this"* from *"I
+deleted this"*. A phone that was offline when an expense was deleted still
+held it, so on reconnecting it offered the expense as news — and the house
+got it back.
+
+Every deletion is now recorded as well as performed: a marker under `tombs`
+saying what was deleted and when, synced like anything else. A device that
+has been away learns the record is gone in the same breath as it learns the
+record exists, and drops it instead of re-uploading it. Markers are forgotten
+after 90 days.
+
+If you want to start over completely, Settings → Backup → **Erase everything**
+clears the house for the whole group — it is not a "this phone only" button —
+and then wipes this device: stored data, caches and the installed worker,
+ending on a fresh login screen. It asks twice. Export a backup first if there
+is anything you want to keep.
+
 ## Updates
 
 `sw.js` caches the app shell. **Bump `VERSION` in it whenever you ship**, or a
@@ -169,6 +193,7 @@ carries a live Firebase config and no test may reach it.
 | `auth` | registering, logging in, migrating a house off the old path |
 | `sync` | connection state, offline edits, edits made in place |
 | `rejoin` | a phone that updated mid-session finding its way back |
+| `deletion` | a delete surviving a sync, and erasing the whole house |
 | `history` | search and filters |
 | `recurring` | monthly rules, the date maths, catching up |
 | `report` | the category donut, and Sinhala labels rendering as text |

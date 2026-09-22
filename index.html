@@ -640,6 +640,94 @@ function legacyPath(house){return 'houses/'+keyOf(house);}
    tell a wrong password apart from a house that does not exist. Holds no data. */
 function namePath(house){return 'names/'+keyOf(house);}
 
+/* Declared here rather than with the rest of the cloud code: the tombstone
+   helpers below need it, and one of them runs from load() before that
+   section has been evaluated. */
+const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts','recurring'];
+
+/* ---- tombstones ----
+   A merge cannot tell "I have never seen this record" from "I deleted this
+   record" by absence alone, so a delete made on one phone came back the next
+   time another phone synced, and was then pushed up again for everyone. A
+   deletion is recorded rather than merely happening: S.tombs holds, per
+   collection, when each removed id was removed, and it syncs child path by
+   child path like everything else, so every device learns the record is gone
+   and none of them restore it.
+
+   Deletions are spotted centrally, by diffing each save against the last one,
+   so every path that removes a record is covered — deleting an expense or a
+   member, undoing a settle, closing a month, removing an archive — without
+   each of them having to remember to leave a marker. */
+const TOMB_TTL=90*864e5;            // long enough that no phone is that stale
+/* Nested rather than keyed "<collection>/<id>": a Realtime Database key
+   cannot contain a slash, and this shape also lets cloudFlush send one
+   marker at a time instead of replacing the whole node. */
+function tombsIn(c){return (S&&S.tombs&&S.tombs[c])||null;}
+function markTomb(c,id,at){if(!S.tombs)S.tombs={};if(!S.tombs[c])S.tombs[c]={};S.tombs[c][id]=at;}
+function clearTomb(c,id){if(S.tombs&&S.tombs[c])delete S.tombs[c][id];}
+function idSet(c){const m={};(S[c]||[]).forEach(x=>{if(x&&x.id)m[x.id]=1;});return m;}
+let localIds=null;                  // id sets as of the last save, to spot removals
+function resetDeletionWatch(){localIds={};CLOUD_COLLS.forEach(c=>localIds[c]=idSet(c));}
+function noteDeletions(){
+  if(!S)return;
+  if(!S.tombs)S.tombs={};
+  if(!localIds){resetDeletionWatch();return;}
+  const now=Date.now();
+  CLOUD_COLLS.forEach(c=>{
+    const cur=idSet(c),was=localIds[c]||{};
+    Object.keys(was).forEach(id=>{if(!cur[id])markTomb(c,id,now);});
+    // A record appearing here for the first time is a genuine re-creation
+    // (recurring expenses reuse a derived id), so it clears its marker.
+    Object.keys(cur).forEach(id=>{if(!was[id])clearTomb(c,id);});
+    localIds[c]=cur;
+  });
+}
+function isTombed(c,id){const m=tombsIn(c);return !!(m&&m[id]);}
+function applyTombs(){
+  let gone=0;
+  CLOUD_COLLS.forEach(c=>{
+    if(!Array.isArray(S[c]))return;
+    const before=S[c].length;
+    S[c]=S[c].filter(x=>!(x&&x.id&&isTombed(c,x.id)));
+    gone+=before-S[c].length;
+  });
+  return gone;
+}
+function mergeTombs(incoming){
+  if(!incoming||typeof incoming!=='object')return;
+  if(!S.tombs)S.tombs={};
+  CLOUD_COLLS.forEach(c=>{
+    const src=incoming[c];
+    if(!src||typeof src!=='object')return;
+    if(!S.tombs[c])S.tombs[c]={};
+    Object.keys(src).forEach(id=>{
+      const at=Number(src[id])||0;
+      if(!S.tombs[c][id]||at>S.tombs[c][id])S.tombs[c][id]=at;
+    });
+  });
+}
+function tombsCopy(t){
+  const out={};
+  CLOUD_COLLS.forEach(c=>{
+    const src=(t&&t[c]&&typeof t[c]==='object')?t[c]:null;
+    if(!src)return;
+    const m={};Object.keys(src).forEach(id=>{const at=Number(src[id])||0;if(at)m[id]=at;});
+    if(Object.keys(m).length)out[c]=m;
+  });
+  return out;
+}
+/* Markers outlive the record but not forever, or the node grows without end. */
+function pruneTombs(d){
+  if(!d||!d.tombs||typeof d.tombs!=='object')return;
+  const cut=Date.now()-TOMB_TTL;
+  Object.keys(d.tombs).forEach(c=>{
+    const m=d.tombs[c];
+    if(!m||typeof m!=='object'){delete d.tombs[c];return;}
+    Object.keys(m).forEach(id=>{if(!(Number(m[id])>cut))delete m[id];});
+    if(!Object.keys(m).length)delete d.tombs[c];
+  });
+}
+
 /* ================= STATE ================= */
 const KEY='bodime_data_v2';
 const AVCOLORS=['#F0573C','#16A074','#F2B544','#6C5CE7','#0FB5BA','#E84393','#2D98DA','#E67E22','#26A65B','#8E44AD'];
@@ -650,6 +738,7 @@ function load(){
   try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.members){
     if(!d.archives)d.archives=[];if(!d.activity)d.activity=[];if(!d.debts)d.debts=[];
     if(!d.recurring)d.recurring=[];
+    if(!d.tombs)d.tombs={};pruneTombs(d);
     migrateWholeRupees(d);migrateStoredPass(d);
     return d;}}catch(e){}
   return null;
@@ -688,7 +777,7 @@ function migrateStoredPass(d){
   delete d.pass;
   return d;
 }
-function fresh(){return{house:'',passHash:'',passSalt:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[],recurring:[]};}
+function fresh(){return{house:'',passHash:'',passSalt:'',lang:'en',members:[],expenses:[],settles:[],archives:[],activity:[],debts:[],recurring:[],tombs:{}};}
 
 /* ---- "who am I" : per-device identity (never synced) ---- */
 const ME_KEY='bodime_me';
@@ -774,6 +863,7 @@ function debtOverdue(d){return d.due && debtRemaining(d)>0 && (new Date(d.due).s
 function debtById(id){return allDebts().find(d=>d.id===id)||null;}
 function debtOwnerName(d){if(d.ownerName)return d.ownerName;const m=d.owner&&S.members.find(x=>x.id===d.owner);return m?m.name:t('someone');}
 function save(){
+  noteDeletions();                 // record anything that just went away
   localStorage.setItem(KEY,JSON.stringify(S));
   if(cloud.on&&cloud.ref&&!cloud.applying)cloudFlush();
 }
@@ -825,10 +915,11 @@ function keyOf(name){return String(name||'').trim().toLowerCase().replace(/[.#$\
    only the changed child paths, so concurrent adds to different ids never
    clobber. A "mirror" of the last-known cloud state lets save() diff and write
    only what changed. */
-const CLOUD_COLLS=['members','expenses','settles','archives','activity','debts','recurring'];
+
 function collMap(arr){const m={};(arr||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;}
 function snapshotColls(){
   const s={meta:{house:S.house||'',passHash:S.passHash||'',passSalt:S.passSalt||'',lang:S.lang||'en'}};
+  s.tombs=tombsCopy(S.tombs);
   CLOUD_COLLS.forEach(c=>s[c]=collMap(S[c]));
   /* Detached on purpose. collMap hands back the live objects, and this
      snapshot becomes cloud.mirror — the "what the cloud already has" side of
@@ -837,12 +928,13 @@ function snapshotColls(){
      was never sent to anyone else. */
   return JSON.parse(JSON.stringify(s));
 }
-function emptyMirror(){const m={meta:{}};CLOUD_COLLS.forEach(c=>m[c]={});return m;}
+function emptyMirror(){const m={meta:{},tombs:{}};CLOUD_COLLS.forEach(c=>m[c]={});return m;}
 /* The mirror must describe what is actually in the cloud, not what we hold
    locally — otherwise cloudFlush() diffs against itself and skips a write we
    owe (e.g. replacing a legacy plaintext meta with the hashed one). */
 function mirrorFromCloud(data){
-  const m={meta:(data&&data.meta)?Object.assign({},data.meta):{}};
+  const m={meta:(data&&data.meta)?Object.assign({},data.meta):{},
+           tombs:tombsCopy(data&&data.tombs)};
   CLOUD_COLLS.forEach(c=>{
     const v=data?data[c]:null;
     m[c]=Array.isArray(v)?collMap(v):(v&&typeof v==='object'?Object.assign({},v):{});
@@ -864,6 +956,7 @@ function readCloudSnapshot(data){
   out.passHash=meta.passHash;
   out.passSalt=meta.passSalt;
   out.lang=meta.lang;
+  out.tombs=tombsCopy(data.tombs);
   CLOUD_COLLS.forEach(c=>{
     const v=data[c];
     out[c]=Array.isArray(v)?v.slice():(v&&typeof v==='object'?Object.values(v):[]);
@@ -876,7 +969,7 @@ function readCloudSnapshot(data){
   out.debts.sort((a,b)=>(b.date||0)-(a.date||0));
   return out;
 }
-function collSig(o){return JSON.stringify([o.house,o.passHash,o.lang].concat(CLOUD_COLLS.map(c=>collMap(o[c]))));}
+function collSig(o){return JSON.stringify([o.house,o.passHash,o.lang,o.tombs||{}].concat(CLOUD_COLLS.map(c=>collMap(o[c]))));}
 function applyCloud(out,notify){
   const prevTop=(S.activity&&S.activity[0])?S.activity[0].id:null;
   cloud.applying=true;
@@ -884,9 +977,11 @@ function applyCloud(out,notify){
   if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
   if(out.lang)S.lang=out.lang;
   CLOUD_COLLS.forEach(c=>S[c]=out[c]||[]);
+  mergeTombs(out.tombs);applyTombs();
   delete S._rupees;migrateWholeRupees(S);
   localStorage.setItem(KEY,JSON.stringify(S));
   cloud.mirror=snapshotColls();
+  resetDeletionWatch();
   cloud.applying=false;cloud.status='synced';updateCloudBadge();
   if(notify)notifyNew(prevTop);
   catchUpRecurring(true);
@@ -902,12 +997,16 @@ function mergeCloudInto(data){
   if(out.house)S.house=out.house;
   if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
   if(out.lang)S.lang=out.lang;
+  // Take their markers before their records, so a record we are about to be
+  // handed is already known to be deleted and is not taken back.
+  mergeTombs(out.tombs);
   let added=0;
   CLOUD_COLLS.forEach(c=>{
     if(!Array.isArray(S[c]))S[c]=[];
     const have={};S[c].forEach(x=>{if(x&&x.id)have[x.id]=1;});
-    (out[c]||[]).forEach(x=>{if(x&&x.id&&!have[x.id]){S[c].push(x);added++;}});
+    (out[c]||[]).forEach(x=>{if(x&&x.id&&!have[x.id]&&!isTombed(c,x.id)){S[c].push(x);added++;}});
   });
+  applyTombs();                    // and drop anything we were still holding
   S.expenses.sort((a,b)=>(b.date||0)-(a.date||0));
   S.settles.sort((a,b)=>(b.date||0)-(a.date||0));
   S.debts.sort((a,b)=>(b.date||0)-(a.date||0));
@@ -916,6 +1015,9 @@ function mergeCloudInto(data){
   delete S._rupees;migrateWholeRupees(S);
   localStorage.setItem(KEY,JSON.stringify(S));
   cloud.mirror=mirrorFromCloud(data);   // so the flush that follows sends our side
+  // Those removals came from the markers, not from this device, so they are
+  // not new deletions to record.
+  resetDeletionWatch();
   cloud.applying=false;
   return added;
 }
@@ -925,6 +1027,13 @@ function cloudFlush(){
   const mir=cloud.mirror||emptyMirror();
   const updates={};
   if(JSON.stringify(cur.meta)!==JSON.stringify(mir.meta||{}))updates['meta']=cur.meta;
+  // Marker by marker, not the whole node: two phones deleting at once would
+  // otherwise overwrite each other's markers and undo one of the deletions.
+  CLOUD_COLLS.forEach(c=>{
+    const ct=(cur.tombs&&cur.tombs[c])||{},ot=(mir.tombs&&mir.tombs[c])||{};
+    Object.keys(ct).forEach(id=>{if(ct[id]!==ot[id])updates['tombs/'+c+'/'+id]=ct[id];});
+    Object.keys(ot).forEach(id=>{if(!(id in ct))updates['tombs/'+c+'/'+id]=null;});
+  });
   CLOUD_COLLS.forEach(c=>{
     const cm=cur[c]||{},om=mir[c]||{};
     Object.keys(cm).forEach(id=>{if(JSON.stringify(cm[id])!==JSON.stringify(om[id]))updates[c+'/'+id]=cm[id];});
@@ -1148,7 +1257,7 @@ const L={
   noacc:'තවම ලියාපදිංචි වෙලා නෑ — Register කරන්න',overwrite:'දැනට තියෙන දත්ත මැකිලා අලුත් බෝඩිමක් හැදෙනවා. දිගටම යන්නද?',
   minpass:'රහස් අංකය අකුරු 4ක්වත් වෙන්න ඕන',cancel:'එපා',ok:'ඔව්',yesgo:'ඔව්, දිගටම',yesdel:'ඔව්, අයින් කරන්න',
   yourbal:'ඔයාගේ තත්ත්වය',allsettled:'සියල්ල පැහැදිලයි 🎉',totspent:'මුළු වියදම',thismonth:'මේ මාසය',
-  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',csvexport:'Spreadsheet එකකට (CSV)',csvdone:'CSV එක බාගත්තා ✓',csv_date:'දිනය',csv_desc:'විස්තරය',csv_amount:'ගාණ',csv_payer:'ගෙව්වේ',csv_split:'බෙදුම',csv_people:'ගාන',csv_total:'මුළු එකතුව',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',editmem:'සාමාජිකයා edit කරන්න',delmem:'සාමාජිකයා අයින් කරන්න',memcolor:'වර්ණය',delarch:'මේ මාසේ අයින් කරන්න',delarchconf:'මේ වහපු මාසේ record එක අයින් කරන්නද? ආපහු ගන්න බෑ.',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
+  recent:'මෑත වියදම්',all:'ඔක්කොම',noexp:'තවම වියදමක් නෑ',noexpS:'පහළ + බොත්තමෙන් මුල්ම වියදම දාන්න',csvexport:'Spreadsheet එකකට (CSV)',csvdone:'CSV එක බාගත්තා ✓',csv_date:'දිනය',csv_desc:'විස්තරය',csv_amount:'ගාණ',csv_payer:'ගෙව්වේ',csv_split:'බෙදුම',csv_people:'ගාන',csv_total:'මුළු එකතුව',recurring:'හැම මාසෙම එන ඒවා',recevery:'හැම මාසෙම මේක දාන්න',recevery2:'කුලී, wifi, gas වගේ',recsub:'මේවා හැම මාසෙම ඉබේම එකතු වෙනවා. ඕන එකක් අයින් කරන්න පුළුවන්.',recnone:'තාම එකක්වත් නෑ',recnoneS:'වියදමක් දාද්දී 🔁 එක on කරන්න',recday:'දවස',recadded:'මාසික වියදම් එකතු කළා',recpaused:'නතර වෙලා',erase:'ඔක්කොම මකන්න',erasebtn:'ඔක්කොම දත්ත මකන්න',erasenote:'බෝඩිමේ ඔක්කොගෙම දත්ත මැකෙනවා — phone එකේ විතරක් නෙවෙයි. ආපහු ගන්න බෑ.',eraseconf1:'බෝඩිමේ ඔක්කොම දත්ත මකන්නද?',eraseconf2:'ඇත්තටම? මේක ආපහු ගන්න බෑ.',eraseyes:'ඔව්, ඔක්කොම මකන්න',erased:'ඔක්කොම මැක්කා',editmem:'සාමාජිකයා edit කරන්න',delmem:'සාමාජිකයා අයින් කරන්න',memcolor:'වර්ණය',delarch:'මේ මාසේ අයින් කරන්න',delarchconf:'මේ වහපු මාසේ record එක අයින් කරන්නද? ආපහු ගන්න බෑ.',searchph:'හොයන්න — විස්තරය, කවුද, ගාණ',nomatch:'කිසිවක් හම්බුනේ නෑ',nomatchS:'හොයන එක වෙනස් කරලා බලන්න',clearfilt:'ඔක්කොම පෙන්නන්න',filttotal:'මේ ටිකේ එකතුව',f_all:'ඔක්කොම',f_week:'දවස් 7',f_month:'මේ මාසේ',f_prev:'ගිය මාසේ',f_anyone:'ඕනම කෙනෙක්',
   addexp:'වියදමක් එකතු කරන්න',desc:'මොකක්ද ගත්තේ?',descph:'උදා: රෑ කෑම, සබන්, දත් බෙහෙත්',amt:'මුළු මුදල',
   paidby:'ගෙව්වේ කවුද?',splitb:'බෙදෙන්නේ කවුද?',perp:'එක්කෙනෙකුට',total:'මුළු',save:'සේරම Save කරන්න',
   selall:'ඔක්කොම',selnone:'කිසිවෙක් නෑ',people:'දෙනෙක්',balances:'ශේෂයන්',settleup:'පියවමු',
@@ -1222,7 +1331,7 @@ const L={
   noacc:'No account yet — please Register',overwrite:'This erases existing data and creates a new house. Continue?',
   minpass:'Password must be at least 4 characters',cancel:'Cancel',ok:'Yes',yesgo:'Yes, continue',yesdel:'Yes, delete',
   yourbal:'Overall standing',allsettled:'All settled 🎉',totspent:'Total spent',thismonth:'This month',
-  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',csvexport:'Export to spreadsheet (CSV)',csvdone:'CSV downloaded ✓',csv_date:'Date',csv_desc:'Description',csv_amount:'Amount',csv_payer:'Paid by',csv_split:'Split',csv_people:'People',csv_total:'Total',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',editmem:'Edit member',delmem:'Remove member',memcolor:'Colour',delarch:'Delete this month',delarchconf:'Delete this closed month? It cannot be brought back.',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
+  recent:'Recent expenses',all:'See all',noexp:'No expenses yet',noexpS:'Tap the + below to add your first one',csvexport:'Export to spreadsheet (CSV)',csvdone:'CSV downloaded ✓',csv_date:'Date',csv_desc:'Description',csv_amount:'Amount',csv_payer:'Paid by',csv_split:'Split',csv_people:'People',csv_total:'Total',recurring:'Recurring',recevery:'Repeat every month',recevery2:'Rent, wifi, gas and the like',recsub:'These are added automatically at the start of each month. Remove any you no longer want.',recnone:'Nothing repeating yet',recnoneS:'Turn on 🔁 while adding an expense',recday:'Day',recadded:'monthly expenses added',recpaused:'paused',erase:'Erase everything',erasebtn:'Erase all data',erasenote:'Clears the house for everyone, not just this phone, and cannot be undone. Export a backup first if you want one.',eraseconf1:'Erase all data for the whole house?',eraseconf2:'Really? This cannot be undone.',eraseyes:'Yes, erase everything',erased:'Everything erased',editmem:'Edit member',delmem:'Remove member',memcolor:'Colour',delarch:'Delete this month',delarchconf:'Delete this closed month? It cannot be brought back.',searchph:'Search description, person, amount',nomatch:'Nothing matches',nomatchS:'Try a different search or filter',clearfilt:'Show everything',filttotal:'Total shown',f_all:'All',f_week:'7 days',f_month:'This month',f_prev:'Last month',f_anyone:'Anyone',
   addexp:'Add expense',desc:'What was it?',descph:'e.g. Dinner, soap, toothpaste',amt:'Total amount',
   paidby:'Who paid?',splitb:'Split between',perp:'Per person',total:'Total',save:'Save expense',
   selall:'All',selnone:'None',people:'people',balances:'Balances',settleup:'Settle up',
@@ -1565,7 +1674,8 @@ function sanitizedTree(data,plainPass){
   else if(plainPass)setPass(meta,plainPass);
   else{meta.passHash=S.passHash||'';meta.passSalt=S.passSalt||'';}
   if(!meta.passHash||!meta.passSalt)return null;   // never write a house nobody can open
-  const tree={meta:{house:meta.house,passHash:meta.passHash,passSalt:meta.passSalt,lang:meta.lang}};
+  const tree={meta:{house:meta.house,passHash:meta.passHash,passSalt:meta.passSalt,lang:meta.lang},
+              tombs:tombsCopy(out.tombs)};
   CLOUD_COLLS.forEach(c=>tree[c]=collMap(out[c]));
   return JSON.parse(JSON.stringify(tree));
 }
@@ -1587,7 +1697,9 @@ function adoptCloudHouse(ref,path,data,v){
   if(out.passHash){S.passHash=out.passHash;S.passSalt=out.passSalt||'';}
   else setPass(S,v);                       // house still on a plaintext password
   delete S._rupees;migrateWholeRupees(S);
+  if(out.tombs){mergeTombs(out.tombs);applyTombs();}
   cloud.ref=ref;cloud.on=true;cloud.mirror=mirrorFromCloud(data);
+  resetDeletionWatch();
   localStorage.setItem(KEY,JSON.stringify(S));
   if(!isNewFormat(data))migrateCloudFormat();   // old flat blob → rewrite wholesale
   else cloudFlush();                            // writes the hashed meta, dropping any meta/pass
@@ -2990,7 +3102,52 @@ function openBackup(){
     <button class="addbtn coral" style="margin-top:0" onclick="exportBackup()">${t('bkExport')}</button>
     <button class="addbtn" style="background:var(--ink);color:#fff" onclick="document.getElementById('bk_file').click()">${t('bkImport')}</button>
     <input type="file" id="bk_file" accept="application/json,.json" style="display:none" onchange="importBackup(this)">`;
+  body+=`<div style="border-top:1px solid var(--line);margin:22px 0 0"></div>
+    <div class="sec-title" style="margin:16px 2px 8px;color:var(--red)">⚠️ ${t('erase')}</div>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:12px">${t('erasenote')}</p>
+    <button class="addbtn" style="background:var(--red-sf);color:var(--red);margin-top:0" onclick="confirmErase()">🗑 ${t('erasebtn')}</button>`;
   sheet('💾 '+t('bkTitle'),body);
+}
+/* ---------- ERASE EVERYTHING ----------
+   Asked twice, because it empties the house for every phone and not just this
+   one. It writes a deletion marker for every record before clearing, so a
+   housemate who happens to be offline right now cannot reconnect later and
+   push the whole house back up. Then it clears this device down to nothing:
+   stored data, the private per-identity keys, and the caches, so no stale
+   copy can be served back. */
+function confirmErase(){
+  askConfirm(t('eraseconf1'),()=>{
+    setTimeout(()=>askConfirm(t('eraseconf2'),doErase,{emoji:'⚠️',yes:t('eraseyes')}),260);
+  },{emoji:'⚠️',yes:tA('yesgo')});
+}
+function doErase(){
+  const now=Date.now();
+  if(!S.tombs)S.tombs={};
+  CLOUD_COLLS.forEach(c=>{
+    (S[c]||[]).forEach(x=>{if(x&&x.id)markTomb(c,x.id,now);});
+    S[c]=[];
+  });
+  save();                                   // pushes the nulls and the markers
+  closeSheet();toast(t('erased'));
+  // Give the write a moment to leave before the device is wiped underneath it.
+  setTimeout(wipeDevice,cloud.on&&cloud.ref?1400:200);
+}
+function wipeDevice(){
+  try{[KEY,ME_KEY,BUDGET_KEY,PERSONAL_KEY,DEBTS_KEY,FBCFG_KEY,'bodime_lang']
+      .forEach(k=>localStorage.removeItem(k));}catch(e){}
+  const reload=()=>{try{location.reload();}catch(e){}};
+  let waited=false;
+  const go=()=>{if(!waited){waited=true;setTimeout(reload,300);}};
+  try{
+    if(window.caches&&caches.keys)
+      caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).then(go,go);
+    else go();
+  }catch(e){go();}
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)
+      navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  }catch(e){}
+  setTimeout(go,2000);                      // never leave it hanging on a stuck cache
 }
 function exportBackup(){
   const data={_bodime:1,_ver:4,exportedAt:Date.now(),

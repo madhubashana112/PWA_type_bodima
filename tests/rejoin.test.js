@@ -313,7 +313,7 @@ async function strandedPhone(b, s, store) {
     s.check('the salt matches the rule pattern', /^[0-9a-f]{8,64}$/.test(node.meta.passSalt || ''), node.meta);
     s.check('meta carries only what the rules allow',
             Object.keys(node.meta).sort().join() === 'house,lang,passHash,passSalt', Object.keys(node.meta));
-    const allowed = ['meta', 'members', 'expenses', 'settles', 'archives', 'activity', 'debts', 'recurring'];
+    const allowed = ['meta', 'tombs', 'members', 'expenses', 'settles', 'archives', 'activity', 'debts', 'recurring'];
     s.check('no stray top-level keys', Object.keys(node).every(k => allowed.includes(k)), Object.keys(node));
     s.check('every record is keyed by its own id', await page.evaluate(() => {
       const k = Object.keys(window.__store.h)[0], n = window.__store.h[k];

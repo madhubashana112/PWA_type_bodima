@@ -47,6 +47,8 @@
         "debts":    { "$id": { "id": { ".validate": "newData.val() === $id" } } },
         "recurring":{ "$id": { "id": { ".validate": "newData.val() === $id" } } },
 
+        "tombs": { "$coll": { "$id": { ".validate": "newData.isNumber()" } } },
+
         "$other": { ".validate": false }
       }
     },
