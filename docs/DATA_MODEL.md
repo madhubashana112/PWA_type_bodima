@@ -115,6 +115,18 @@ Money owed to someone outside the house, shared with the rest of it.
 partial or paid from that, and as overdue once `due` has passed with
 something still owing.
 
+`owner` is picked explicitly in the form, from the house's member list — it
+used to default silently to whichever member the device was logged in as,
+and a device with no identity chosen (the "Not me" option on the who-am-I
+sheet) baked the localised word for "someone" into `ownerName` as if it were
+a name. That value was then trusted forever: `debtOwnerName` returned it
+ahead of a live lookup, so no amount of setting up an identity afterwards
+could fix a debt already saved that way. `debtOwnerName` now takes the
+current member list as the source of truth whenever `owner` resolves, and
+only falls back to a stored `ownerName` — never to a placeholder — when it
+does not; editing a debt lets `owner` be reassigned, which is how an already
+broken record gets repaired.
+
 ## Per-device keys
 
 These are deliberately outside `S` and never sync.
