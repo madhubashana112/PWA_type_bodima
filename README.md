@@ -23,7 +23,9 @@ is no build step, no bundler and no server to run.
   export for a spreadsheet. A House / Mine switch shows either the whole
   house's figures or just your own.
 - **Personal expenses** — what you spent on yourself, kept on your phone and
-  never synced to the house, counted in your own report and budget.
+  never synced to the house, counted in your own report and budget, and
+  mixed into Home's recent-activity feed (marked as personal) so it isn't
+  only visible from the report.
 - **Month close** that files everything into an archive and starts fresh;
   a closed month can be deleted again, with a confirmation.
 - **Deletions that stay deleted** — what one phone removes is removed for

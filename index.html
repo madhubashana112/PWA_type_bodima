@@ -1926,7 +1926,13 @@ function viewHome(){
   const now=new Date();const month=now.getMonth(),yr=now.getFullYear();
   let total=0,mon=0;
   S.expenses.forEach(e=>{total+=e.amount;const d=new Date(e.date);if(d.getMonth()===month&&d.getFullYear()===yr)mon+=e.amount;});
-  const recent=[...S.expenses].sort((a,b)=>b.date-a.date).slice(0,6);
+  // The tiles above stay house-only — personal spending never leaves this
+  // device, so it can't be folded into a total everyone else also sees.
+  // The feed below is different: it's a look at recent activity from
+  // wherever this phone is looking, so this device's own personal entries
+  // join it too, marked as such by personalRow.
+  const feed=[...S.expenses,...myPersonal().map(x=>Object.assign({},x,{_personal:true}))];
+  const recent=feed.sort((a,b)=>b.date-a.date).slice(0,6);
   let h=`<div class="stg">
     <div class="stats">
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
@@ -1936,7 +1942,7 @@ function viewHome(){
   h+=`<button class="addbtn coral" style="margin-top:0;margin-bottom:20px" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   h+=`<div class="sec-title">${t('recent')} ${S.expenses.length>6?`<span class="link" onclick="go('hist')">${t('all')} →</span>`:''}</div>`;
   if(!recent.length){h+=`<div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div>`;}
-  else{h+=`<div class="card">${recent.map(expRow).join('')}</div>`;}
+  else{h+=`<div class="card">${recent.map(e=>e._personal?personalRow(e):expRow(e)).join('')}</div>`;}
   const meId0=getMeId();
   const myList=meId0?allDebts().filter(d=>d.owner===meId0):allDebts();
   const owe=myList.reduce((a,d)=>a+debtRemaining(d),0);
@@ -3459,7 +3465,10 @@ function savePersonal(){
   }
   setMyPersonal(list);
   closeSheet();toast(pDraft.editId?t('updated'):t('saved'));
-  reportScope='mine';view='report';drawView();
+  // Stay wherever this was opened from — Home shows personal entries in its
+  // feed too now, and jumping the screen to Report on save would undo the
+  // point of editing one from there.
+  drawView();
 }
 function delPersonal(id){
   askConfirm(t('delpconf'),()=>{

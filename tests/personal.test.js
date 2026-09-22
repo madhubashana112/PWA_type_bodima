@@ -199,6 +199,49 @@ const fs = require('fs');
   s.check('the CSV total matches the tile', csvTotal === await page.evaluate(() =>
           mineAsExpenses('month').reduce((t, e) => t + e.amount, 0)), csvTotal);
 
+  s.section('13. Home shows recent activity, personal entries included');
+  await page.evaluate(() => { view = 'home'; drawView(); });
+  await page.waitForTimeout(350);
+  const expectedTiles = await page.evaluate(() => {
+    const now = new Date(), month = now.getMonth(), yr = now.getFullYear();
+    let total = 0, mon = 0;
+    S.expenses.forEach(e => { total += e.amount; const d = new Date(e.date);
+      if (d.getMonth() === month && d.getFullYear() === yr) mon += e.amount; });
+    return [fmt(total), fmt(mon)];
+  });
+  const tiles = await page.evaluate(() => Array.from(document.querySelectorAll('.stat .v')).map(el => el.textContent));
+  s.check('the tiles stay house-only — personal spending is not folded in',
+          tiles[0] === expectedTiles[0] && tiles[1] === expectedTiles[1], [tiles, expectedTiles]);
+  s.check('the feed shows every item — four house expenses plus the personal one',
+          (await page.evaluate(() => document.querySelectorAll('.stg .card .exp').length)) === 5);
+  const rowTexts = await page.evaluate(() => Array.from(document.querySelectorAll('.stg .card .exp')).map(el => el.textContent));
+  s.check('the personal entry is in the feed', rowTexts.some(t => t.includes('Haircut')), rowTexts);
+  s.check('and it reads as personal, not as a shared expense',
+          rowTexts.some(t => t.includes('Haircut') && /Personal/i.test(t)), rowTexts);
+  // Most recent first: the personal entry was just (re)saved, so it leads.
+  s.check('newest first, across both kinds', rowTexts[0].includes('Haircut'), rowTexts[0]);
+
+  s.section('14. tapping through from Home behaves, and stays on Home');
+  const personalRowIdx = rowTexts.findIndex(t => t.includes('Haircut'));
+  await page.click(`.stg .card .exp:nth-child(${personalRowIdx + 1})`);
+  await page.waitForTimeout(400);
+  s.check('it opens the personal editor, not the expense one', await page.evaluate(() => !!document.getElementById('p_amt')));
+  await page.fill('#p_amt', '650');
+  await page.click('#sheet .addbtn.coral');
+  await page.waitForTimeout(400);
+  s.check('the edit is saved', (await page.evaluate(() => myPersonal()[0].amount)) === 650);
+  s.check('and it does not yank the screen to Report', await page.evaluate(() => view === 'home'), await page.evaluate(() => view));
+  s.check('the updated amount shows on Home',
+          (await page.evaluate(() => document.querySelector('.stg .card').textContent)).includes('650'));
+
+  s.section('15. one identity never sees another\'s personal entries on Home either');
+  const otherId = await page.evaluate(() => S.members[1].id);
+  await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, otherId);
+  await page.waitForTimeout(350);
+  s.check('no trace of the first identity\'s personal entry',
+          !(await page.evaluate(() => document.querySelector('.stg .card').textContent)).includes('Haircut'));
+  await page.evaluate(id => setMeId(id), await page.evaluate(() => S.members[0].id));
+
   await ctx.close();
   await b.close();
   s.finish();
