@@ -1941,6 +1941,7 @@ function viewHome(){
   // for the month, since Home has no period tabs of its own to pick from.
   const mySpend=meId0?mineAsExpenses('month').reduce((s,e)=>s+e.amount,0):0;
   let h=`<div class="stg">
+    <button class="addbtn coral" style="margin-top:0;margin-bottom:16px" onclick="openExpense()">＋ ${t('addexp')}</button>
     <div class="stats">
       <div class="stat"><div class="ic">💰</div><div class="v">${fmt(total)}</div><div class="l">${t('totspent')}</div></div>
       <div class="stat"><div class="ic">📅</div><div class="v">${fmt(mon)}</div><div class="l">${t('thismonth')}</div></div>
@@ -1953,7 +1954,6 @@ function viewHome(){
   h+=`<button class="addbtn" style="background:linear-gradient(135deg,#5b2df0,#7d3af0);color:#fff;margin-top:0;margin-bottom:14px" onclick="go('debts')">
     💳 ${t('moneyowe')} — ${fmt(owe)}${over?' ⚠️':''}</button>`;
   h+=`<button class="reportbtn" onclick="go('report')">📊 ${t('report')}</button>`;
-  h+=`<button class="addbtn coral" style="margin-top:0;margin-bottom:20px" onclick="openExpense()">＋ ${t('addexp')}</button>`;
   h+=`<div class="sec-title">${t('recent')} ${S.expenses.length>6?`<span class="link" onclick="go('hist')">${t('all')} →</span>`:''}</div>`;
   if(!recent.length){h+=`<div class="card"><div class="empty"><div class="em">🧾</div><div class="t">${t('noexp')}</div><div class="s">${t('noexpS')}</div></div></div>`;}
   else{h+=`<div class="card">${recent.map(e=>e._personal?personalRow(e):expRow(e)).join('')}</div>`;}

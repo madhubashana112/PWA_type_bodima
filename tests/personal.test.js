@@ -265,6 +265,21 @@ const fs = require('fs');
           (await page.evaluate(() => document.querySelectorAll('.stats .stat').length)) === 2);
   await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, await page.evaluate(() => S.members[0].id));
 
+  s.section('18. Add expense leads on Home, above the stats');
+  const homeOrder = await page.evaluate(() => {
+    const kids = Array.from(document.querySelector('.stg').children);
+    return { add: kids.findIndex(el => el.classList.contains('coral')),
+             stats: kids.findIndex(el => el.classList.contains('stats')) };
+  });
+  s.check('it is the very first thing on the screen', homeOrder.add === 0, homeOrder);
+  s.check('above Total spent / This month', homeOrder.add < homeOrder.stats, homeOrder);
+  s.check('only the one Add-expense button — no leftover second copy',
+          (await page.evaluate(() => document.querySelectorAll('.stg .addbtn.coral').length)) === 1);
+  await page.click('.stg .addbtn.coral');
+  await page.waitForTimeout(400);
+  s.check('and it still opens the expense sheet', await page.evaluate(() => !!document.getElementById('e_desc')));
+  await page.evaluate(() => closeSheet());
+
   await ctx.close();
   await b.close();
   s.finish();
