@@ -157,6 +157,23 @@ async function overlaps(page, a, bSel) {
   s.check('and that name is what shows',
           created && created.ownerName === (await page.evaluate(id => S.members.find(m => m.id === id).name, otherId)));
 
+  s.section('7. reachable from Home, above Report, not from the top bar');
+  // otherId owns every debt in this suite by now; pick the identity that
+  // actually has one, or the button has nothing to show and never renders.
+  await page.evaluate(id => { setMeId(id); view = 'home'; drawView(); }, otherId);
+  await page.waitForTimeout(350);
+  s.check('no icon for it in the top bar',
+          !(await page.evaluate(() => Array.from(document.querySelectorAll('.tools .icbtn')).some(b => b.textContent.includes('💳')))));
+  const order = await page.evaluate(() => {
+    const kids = Array.from(document.querySelector('.stg').children);
+    return { owe: kids.findIndex(el => el.textContent.includes('💳')),
+             report: kids.findIndex(el => el.classList.contains('reportbtn')) };
+  });
+  s.check('the money-owed button sits above Report', order.owe !== -1 && order.owe < order.report, order);
+  await page.click('.stg .addbtn:not(.coral)');
+  await page.waitForTimeout(300);
+  s.check('tapping it opens the debts list', await page.evaluate(() => view === 'debts'));
+
   await ctx.close();
   await b.close();
   s.finish();
